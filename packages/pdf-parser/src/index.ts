@@ -7,7 +7,6 @@
 
 export { PdfExtractor } from './pdf-extractor';
 export {
-  BidiDirection,
   PdfExtractionOptions,
   PdfExtractionResult,
   PdfMetadata,

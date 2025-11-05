@@ -5,13 +5,14 @@
  * This test provides comprehensive manual verification of:
  * - Text extraction from files and buffers
  * - Metadata extraction from files and buffers
- * - Bidi text handling (LTR/RTL)
  * - Content verification with real PDFs
+ *
+ * Note: Bidirectional text support is always enabled.
  *
  * Run with: npm run test:manual
  */
 
-const { PdfExtractor, BidiDirection } = require('../dist/index');
+const { PdfExtractor } = require('../dist/index');
 const fs = require('fs');
 const path = require('path');
 
@@ -53,7 +54,6 @@ async function testTextExtraction() {
   log(`   ✓ Page count: ${result.pageCount}`, 'green');
   log(`   ✓ File size: ${result.fileSize} bytes`, 'green');
   log(`   ✓ Text length: ${result.text.length} characters`, 'green');
-  log(`   ✓ Bidi direction: ${result.bidiDirection === BidiDirection.LTR ? 'LTR' : 'RTL'}`, 'green');
 
   // Verify content
   assert(result.text.includes('Paths'), 'Should contain "Paths"');
@@ -74,18 +74,8 @@ async function testTextExtraction() {
   assert(bufferResult.text.includes('Circles'), 'Buffer extraction should contain "Circles"');
   log('   ✓ Content verification passed', 'green');
 
-  // Test 3: Extract with RTL bidi direction
-  log('\n3. Extract with RTL bidi direction', 'yellow');
-  const rtlExtractor = new PdfExtractor({ bidiDirection: BidiDirection.RTL });
-  const rtlResult = await rtlExtractor.extractText(SIMPLE_PDF);
-
-  assert(rtlResult.bidiDirection === BidiDirection.RTL, 'Should have RTL direction');
-  assert(rtlResult.text.includes('Paths'), 'RTL extraction should contain "Paths"');
-  log(`   ✓ RTL direction set correctly`, 'green');
-  log('   ✓ Content still readable', 'green');
-
-  // Test 4: Extract from multi-page document
-  log('\n4. Extract from multi-page CV document', 'yellow');
+  // Test 3: Extract from multi-page document
+  log('\n3. Extract from multi-page CV document', 'yellow');
   const cvResult = await extractor.extractText(CV_PDF);
 
   log(`   ✓ Page count: ${cvResult.pageCount}`, 'green');

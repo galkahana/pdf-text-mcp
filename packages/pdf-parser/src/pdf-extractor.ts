@@ -7,7 +7,7 @@ import {
   PdfExtractionError,
   PdfErrorCode,
 } from './types';
-import { validateFile, createDefaultOptions } from './utils';
+import { validateFile, createDefaultOptions, withTimeout } from './utils';
 
 // Load native addon
 // The native addon is built by cmake-js and placed in the build/Release directory
@@ -50,8 +50,11 @@ export class PdfExtractor {
       const stats = await fs.stat(filePath);
       const fileSize = stats.size;
 
-      // Extract text using native binding
-      const result = await this.extractTextNative(filePath);
+      // Extract text using native binding with timeout
+      const result = await withTimeout(
+        this.extractTextNative(filePath),
+        this.options.timeout
+      );
 
       const processingTime = Date.now() - startTime;
 
@@ -60,7 +63,6 @@ export class PdfExtractor {
         pageCount: result.pageCount,
         processingTime,
         fileSize,
-        bidiDirection: result.bidiDirection,
       };
     } catch (error) {
       if (error instanceof PdfExtractionError) {
@@ -89,8 +91,11 @@ export class PdfExtractor {
         );
       }
 
-      // Extract text using native binding
-      const result = await this.extractTextFromBufferNative(buffer);
+      // Extract text using native binding with timeout
+      const result = await withTimeout(
+        this.extractTextFromBufferNative(buffer),
+        this.options.timeout
+      );
 
       const processingTime = Date.now() - startTime;
 
@@ -99,7 +104,6 @@ export class PdfExtractor {
         pageCount: result.pageCount,
         processingTime,
         fileSize: buffer.length,
-        bidiDirection: result.bidiDirection,
       };
     } catch (error) {
       if (error instanceof PdfExtractionError) {
@@ -119,7 +123,10 @@ export class PdfExtractor {
   async getMetadata(filePath: string): Promise<PdfMetadata> {
     try {
       await validateFile(filePath, this.options.maxFileSize);
-      return await this.getMetadataNative(filePath);
+      return await withTimeout(
+        this.getMetadataNative(filePath),
+        this.options.timeout
+      );
     } catch (error) {
       if (error instanceof PdfExtractionError) {
         throw error;
@@ -143,7 +150,10 @@ export class PdfExtractor {
           PdfErrorCode.FILE_TOO_LARGE
         );
       }
-      return await this.getMetadataFromBufferNative(buffer);
+      return await withTimeout(
+        this.getMetadataFromBufferNative(buffer),
+        this.options.timeout
+      );
     } catch (error) {
       if (error instanceof PdfExtractionError) {
         throw error;
@@ -157,14 +167,20 @@ export class PdfExtractor {
   }
 
   // Native binding methods
+  // Note: Bidi direction is always LTR (0). The bidi algorithm is ALWAYS applied
+  // by the native library when ICU is available (required at build time).
+  //
+  // TIMEOUT LIMITATION: These native calls use synchronous C++ code wrapped in Promises.
+  // The timeout is "soft" - it rejects the promise after the timeout, but the native
+  // code continues running in the background until completion.
+  // TODO: Implement true cancellation using N-API async workers (see FUTURE_FEATURES.md)
   private async extractTextNative(filePath: string): Promise<{
     text: string;
     pageCount: number;
-    bidiDirection: number;
   }> {
     return new Promise((resolve, reject) => {
       try {
-        const result = nativeAddon.extractTextFromFile(filePath, this.options.bidiDirection);
+        const result = nativeAddon.extractTextFromFile(filePath, 0 /* LTR */);
         resolve(result);
       } catch (error) {
         reject(
@@ -181,11 +197,10 @@ export class PdfExtractor {
   private async extractTextFromBufferNative(buffer: Buffer): Promise<{
     text: string;
     pageCount: number;
-    bidiDirection: number;
   }> {
     return new Promise((resolve, reject) => {
       try {
-        const result = nativeAddon.extractTextFromBuffer(buffer, this.options.bidiDirection);
+        const result = nativeAddon.extractTextFromBuffer(buffer, 0 /* LTR */);
         resolve(result);
       } catch (error) {
         reject(

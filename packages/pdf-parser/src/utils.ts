@@ -1,6 +1,5 @@
 import { promises as fs } from 'fs';
 import {
-  BidiDirection,
   PdfExtractionOptions,
   PdfExtractionError,
   PdfErrorCode,
@@ -19,7 +18,6 @@ export function createDefaultOptions(
   options: PdfExtractionOptions
 ): Required<PdfExtractionOptions> {
   return {
-    bidiDirection: options.bidiDirection ?? BidiDirection.LTR,
     maxFileSize: options.maxFileSize ?? DEFAULT_MAX_FILE_SIZE,
     timeout: options.timeout ?? DEFAULT_TIMEOUT,
   };

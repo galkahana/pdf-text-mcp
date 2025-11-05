@@ -2,23 +2,7 @@
  * Core types for PDF text extraction
  */
 
-/**
- * Bidi (bidirectional text) direction constants
- * The bidi algorithm is always applied for proper text ordering
- */
-export enum BidiDirection {
-  /** Left-to-right (default for most languages) */
-  LTR = 0,
-  /** Right-to-left (for Hebrew, Arabic, etc.) */
-  RTL = 1,
-}
-
 export interface PdfExtractionOptions {
-  /**
-   * Bidi algorithm direction - always applied for proper text ordering
-   * @default BidiDirection.LTR
-   */
-  bidiDirection?: BidiDirection;
   /** Maximum file size in bytes (default: 100MB) */
   maxFileSize?: number;
   /** Timeout for extraction in milliseconds (default: 30000) */
@@ -34,8 +18,6 @@ export interface PdfExtractionResult {
   processingTime: number;
   /** File size in bytes */
   fileSize: number;
-  /** Bidi direction used for text extraction */
-  bidiDirection: BidiDirection;
 }
 
 export interface PdfMetadata {

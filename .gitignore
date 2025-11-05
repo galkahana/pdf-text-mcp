@@ -61,3 +61,7 @@ test-output/
 
 # Docker
 docker-compose.override.yml
+
+# Claude Code session files (temporary conversation transcripts)
+session_*.md
+/session_*.md
