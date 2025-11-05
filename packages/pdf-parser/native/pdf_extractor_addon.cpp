@@ -25,11 +25,6 @@
 #include "IByteReaderWithPosition.h"
 #include "IOBasicTypes.h"
 
-// Bidi direction constants (mirrors BidiConversion constants)
-// When ICU is available: uses UBIDI_DEFAULT_LTR/RTL, otherwise fallback to 0/1
-static const int BIDI_DIRECTION_LTR = 0;  // Left-to-right (default for most documents)
-static const int BIDI_DIRECTION_RTL = 1;  // Right-to-left (Hebrew, Arabic, etc.)
-
 /**
  * BufferByteReader: Implements IByteReaderWithPosition for reading from memory buffers
  * This allows direct PDF parsing from Node.js buffers without temp files
@@ -166,7 +161,8 @@ Napi::Value ExtractTextFromFile(const Napi::CallbackInfo& info) {
     }
 
     std::string filePath = info[0].As<Napi::String>().Utf8Value();
-    int bidiDirection = BIDI_DIRECTION_LTR;  // Default to Left-to-Right
+    // Always use LTR (0) - bidi algorithm is always applied for proper text ordering
+    int bidiDirection = 0;  // 0 = LTR (Left-to-Right)
 
     if (info.Length() > 1 && info[1].IsNumber()) {
         bidiDirection = info[1].As<Napi::Number>().Int32Value();
@@ -213,7 +209,8 @@ Napi::Value ExtractTextFromBuffer(const Napi::CallbackInfo& info) {
     }
 
     Napi::Buffer<uint8_t> buffer = info[0].As<Napi::Buffer<uint8_t>>();
-    int bidiDirection = BIDI_DIRECTION_LTR;  // Default to Left-to-Right
+    // Always use LTR (0) - bidi algorithm is always applied for proper text ordering
+    int bidiDirection = 0;  // 0 = LTR (Left-to-Right)
 
     if (info.Length() > 1 && info[1].IsNumber()) {
         bidiDirection = info[1].As<Napi::Number>().Int32Value();

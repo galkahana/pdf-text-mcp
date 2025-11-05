@@ -5,8 +5,8 @@ project(pdf_parser_native)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Enable bidi support
-option(USE_BIDI "Enable bidirectional text support" ON)
+# Enable bidi support - must be set before FetchContent to pass down to pdf-text-extraction
+set(USE_BIDI ON CACHE BOOL "Enable bidirectional text support" FORCE)
 
 # Fetch pdf-text-extraction library
 include(FetchContent)

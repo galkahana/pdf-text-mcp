@@ -11,7 +11,7 @@ import {
   DEFAULT_MAX_FILE_SIZE,
   DEFAULT_TIMEOUT,
 } from '../src/utils';
-import { BidiDirection, PdfExtractionError, PdfErrorCode } from '../src/types';
+import { PdfExtractionError, PdfErrorCode } from '../src/types';
 
 describe('Utils', () => {
   let tempDir: string;
@@ -31,7 +31,6 @@ describe('Utils', () => {
     it('should create default options with no overrides', () => {
       const options = createDefaultOptions({});
       expect(options).toEqual({
-        bidiDirection: BidiDirection.LTR,
         maxFileSize: DEFAULT_MAX_FILE_SIZE,
         timeout: DEFAULT_TIMEOUT,
       });
@@ -39,11 +38,9 @@ describe('Utils', () => {
 
     it('should merge user options with defaults', () => {
       const options = createDefaultOptions({
-        bidiDirection: BidiDirection.RTL,
         maxFileSize: 50 * 1024 * 1024,
       });
       expect(options).toEqual({
-        bidiDirection: BidiDirection.RTL,
         maxFileSize: 50 * 1024 * 1024,
         timeout: DEFAULT_TIMEOUT,
       });

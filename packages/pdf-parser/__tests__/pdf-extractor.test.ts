@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { PdfExtractor } from '../src/pdf-extractor';
-import { BidiDirection, PdfExtractionError, PdfErrorCode } from '../src/types';
+import { PdfExtractionError, PdfErrorCode } from '../src/types';
 
 describe('PdfExtractor', () => {
   let tempDir: string;
@@ -46,7 +46,6 @@ describe('PdfExtractor', () => {
 
     it('should create extractor with custom options', () => {
       const customExtractor = new PdfExtractor({
-        bidiDirection: BidiDirection.RTL,
         maxFileSize: 50 * 1024 * 1024,
         timeout: 60000,
       });
@@ -78,32 +77,18 @@ describe('PdfExtractor', () => {
       expect(result).toHaveProperty('pageCount');
       expect(result).toHaveProperty('processingTime');
       expect(result).toHaveProperty('fileSize');
-      expect(result).toHaveProperty('bidiDirection');
 
       expect(typeof result.text).toBe('string');
       expect(result.text.length).toBeGreaterThan(0);
       expect(result.pageCount).toBeGreaterThan(0);
       expect(result.processingTime).toBeGreaterThanOrEqual(0);
       expect(result.fileSize).toBeGreaterThan(0);
-      expect(result.bidiDirection).toBe(BidiDirection.LTR);
 
       // Verify actual content - HighLevelContentContext.pdf contains these words
       expect(result.text).toContain('Paths');
       expect(result.text).toContain('Squares');
       expect(result.text).toContain('Circles');
       expect(result.text).toContain('Rectangles');
-    });
-
-    it('should extract text with RTL bidi direction', async () => {
-      const rtlExtractor = new PdfExtractor({ bidiDirection: BidiDirection.RTL });
-      const result = await rtlExtractor.extractText(realPdfPath);
-
-      expect(result.bidiDirection).toBe(BidiDirection.RTL);
-      expect(result.text.length).toBeGreaterThan(0);
-
-      // Content should still be present regardless of bidi direction
-      expect(result.text).toContain('Paths');
-      expect(result.text).toContain('Squares');
     });
 
     it('should extract meaningful text from a multi-page document', async () => {
@@ -138,12 +123,10 @@ describe('PdfExtractor', () => {
 
       expect(result).toHaveProperty('text');
       expect(result).toHaveProperty('pageCount');
-      expect(result).toHaveProperty('bidiDirection');
 
       expect(typeof result.text).toBe('string');
       expect(result.text.length).toBeGreaterThan(0);
       expect(result.pageCount).toBeGreaterThan(0);
-      expect(result.bidiDirection).toBe(BidiDirection.LTR);
 
       // Verify actual content from buffer extraction
       expect(result.text).toContain('Paths');
@@ -193,6 +176,32 @@ describe('PdfExtractor', () => {
 
       expect(metadata.pageCount).toBeGreaterThan(0);
       expect(typeof metadata.version).toBe('string');
+    });
+  });
+
+  describe('timeout behavior', () => {
+    // Note: Timeout tests are challenging because the native extraction is synchronous
+    // and executes on the same event loop tick. For small PDFs (like our test files),
+    // extraction completes in <10ms before the timeout timer can even fire.
+    // True timeout testing would require:
+    // 1. Very large PDFs that take >100ms to process, OR
+    // 2. N-API async workers (see FUTURE_FEATURES.md)
+    //
+    // For now, we verify that the timeout logic is wired up correctly with a reasonable timeout.
+
+    it('should succeed with reasonable timeout', async () => {
+      // 30 seconds should be plenty for these small test PDFs
+      const reasonableExtractor = new PdfExtractor({ timeout: 30000 });
+      const result = await reasonableExtractor.extractText(realPdfPath);
+
+      expect(result.text).toContain('Paths');
+      expect(result.pageCount).toBeGreaterThan(0);
+    });
+
+    it('should use custom timeout value', () => {
+      const customExtractor = new PdfExtractor({ timeout: 5000 });
+      // Verify the timeout option is accepted
+      expect(customExtractor).toBeInstanceOf(PdfExtractor);
     });
   });
 });
