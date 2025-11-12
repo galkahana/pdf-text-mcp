@@ -2,8 +2,7 @@
 
 # Build the package (native addon + TypeScript)
 build:
-    npm run build:native
-    npx --prefix ../.. tsc
+    npm run build
 
 # Build only the native C++ addon
 build-native:
@@ -38,7 +37,7 @@ clean:
 
 # Development mode with TypeScript watch
 dev:
-    npx --prefix ../.. tsc --watch
+    npm run dev
 
 # Install dependencies
 install:

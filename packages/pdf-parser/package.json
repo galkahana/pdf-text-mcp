@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "npm run build:native && npx --prefix ../.. tsc",
+    "build": "npm run build:native && tsc",
     "build:native": "cmake-js compile",
     "rebuild": "cmake-js rebuild",
     "clean": "rimraf dist build",
@@ -14,7 +14,7 @@
     "test:coverage": "jest --coverage",
     "test:manual": "node manual-tests/integration-test.js",
     "test:all": "npm test && npm run test:manual",
-    "dev": "npx --prefix ../.. tsc --watch"
+    "dev": "tsc --watch"
   },
   "files": [
     "dist",
