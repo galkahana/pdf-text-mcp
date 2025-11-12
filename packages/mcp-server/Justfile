@@ -2,7 +2,7 @@
 
 # Build the TypeScript package
 build:
-    npx --prefix ../.. tsc -p tsconfig.json
+    npm run build
 
 # Run tests
 test:
@@ -48,7 +48,7 @@ clean:
 
 # Development mode with TypeScript watch
 dev:
-    npx --prefix ../.. tsc -p tsconfig.json --watch
+    npm run dev
 
 # Start the MCP server
 start:

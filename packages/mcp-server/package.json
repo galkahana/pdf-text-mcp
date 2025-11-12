@@ -8,8 +8,8 @@
     "pdf-text-mcp-server": "./dist/index.js"
   },
   "scripts": {
-    "build": "npx --prefix ../.. tsc -p tsconfig.json",
-    "dev": "npx --prefix ../.. tsc -p tsconfig.json --watch",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
     "start": "node dist/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -25,13 +25,19 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
-    "@pdf-text-mcp/pdf-parser": "^1.0.0",
+    "@pdf-text-mcp/pdf-parser": "file:../pdf-parser",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.55.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.0.1",
     "jest": "^29.7.0",
+    "prettier": "^3.1.0",
     "ts-jest": "^29.1.0",
     "typescript": "^5.3.0"
   },
