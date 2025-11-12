@@ -35,7 +35,8 @@ Model Context Protocol server for PDF text extraction using native C++ bindings.
 pdf-text-mcp/
 ├── packages/
 │   ├── pdf-parser/      # Native C++ addon + TypeScript wrapper
-│   └── mcp-server/      # MCP protocol server
+│   ├── mcp-server/      # MCP protocol server
+│   └── example-agent/   # Python AI agent example (PydanticAI)
 ├── .claude-session-data.md  # Claude context (development notes)
 └── README.md            # This file
 ```
@@ -65,6 +66,7 @@ npm test
 For detailed usage instructions:
 - **MCP Server setup**: See [packages/mcp-server/README.md](packages/mcp-server/README.md)
 - **PDF Parser API**: See [packages/pdf-parser/README.md](packages/pdf-parser/README.md)
+- **Example AI Agent**: See [packages/example-agent/README.md](packages/example-agent/README.md)
 
 ## Available Commands
 
@@ -94,6 +96,7 @@ npm test --workspace=@pdf-text-mcp/mcp-server
 - ✅ Timeout protection (soft timeout)
 - ✅ TypeScript type definitions
 - ✅ Comprehensive test suite
+- ✅ Example AI agent with PydanticAI
 
 ## Packages
 
@@ -114,6 +117,15 @@ MCP server exposing PDF extraction via JSON-RPC protocol.
 - `extract_text` and `extract_metadata` tools
 - Claude Desktop integration
 - Environment-based configuration
+
+### [example-agent](packages/example-agent/README.md)
+
+Example AI agent demonstrating PDF summarization using PydanticAI.
+
+- PydanticAI framework with Google Gemini
+- MCP client integration via stdio transport
+- PDF summarization, text extraction, and metadata analysis
+- Command-line interface with `uv`
 
 ## Future Features
 
