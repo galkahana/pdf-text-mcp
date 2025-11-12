@@ -173,9 +173,55 @@ When you ask the agent to summarize a PDF:
 
 ## Development
 
-### Code Quality Commands
+### Using Just (Recommended)
 
-The project includes linting, formatting, and type checking tools:
+The project uses [just](https://github.com/casey/just) for common development tasks:
+
+```bash
+# Install dependencies
+just install
+
+# Run tests
+just test
+
+# Run tests in verbose mode
+just test-verbose
+
+# Run tests with coverage
+just test-coverage
+
+# Lint check
+just lint
+
+# Auto-fix linting issues
+just lint-fix
+
+# Format code
+just format
+
+# Check formatting
+just format-check
+
+# Type check
+just type-check
+
+# Run all checks (lint + format-check + type-check + test)
+just check
+
+# Clean artifacts
+just clean
+
+# Run demo
+just demo
+
+# Run specific command (summarize, extract, metadata)
+just run summarize examples/GalKahanaCV2022.pdf
+
+# See all available commands
+just --list
+```
+
+### Using uv directly
 
 ```bash
 # Run linter (ruff)
@@ -196,7 +242,7 @@ uv run mypy src
 # Run tests
 uv run pytest tests
 
-# Run all checks (lint + format-check + type-check + test)
+# Run all checks
 uv run ruff check src tests && \
 uv run black --check src tests && \
 uv run mypy src && \

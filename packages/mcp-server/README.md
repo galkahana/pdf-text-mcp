@@ -6,12 +6,59 @@ Model Context Protocol server for PDF text extraction.
 
 ```bash
 npm install
-npm run build
 ```
 
-## Running
+## Building and Running
+
+### Using Just (Recommended)
 
 ```bash
+# Install dependencies
+just install
+
+# Build TypeScript
+just build
+
+# Run tests
+just test
+
+# Lint check
+just lint
+
+# Auto-fix linting
+just lint-fix
+
+# Format code
+just format
+
+# Check formatting
+just format-check
+
+# Run all checks (lint + format + test)
+just check
+
+# Start the server
+just start
+
+# Build and start
+just run
+
+# Development mode (watch)
+just dev
+
+# Clean build artifacts
+just clean
+
+# See all available commands
+just --list
+```
+
+### Using npm
+
+```bash
+# Build
+npm run build
+
 # Start server (stdio transport)
 npm start
 

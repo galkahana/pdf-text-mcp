@@ -1,0 +1,52 @@
+# PDF Parser Package - Build and Test Commands
+
+# Build the package (native addon + TypeScript)
+build:
+    npm run build:native
+    npx --prefix ../.. tsc
+
+# Build only the native C++ addon
+build-native:
+    cmake-js compile
+
+# Rebuild the native addon from scratch
+rebuild:
+    cmake-js rebuild
+
+# Run tests
+test:
+    jest
+
+# Run tests in watch mode
+test-watch:
+    jest --watch
+
+# Run tests with coverage
+test-coverage:
+    jest --coverage
+
+# Run manual integration tests
+test-manual:
+    node manual-tests/integration-test.js
+
+# Run all tests (unit + manual)
+test-all: test test-manual
+
+# Clean build artifacts
+clean:
+    rimraf dist build
+
+# Development mode with TypeScript watch
+dev:
+    npx --prefix ../.. tsc --watch
+
+# Install dependencies
+install:
+    npm install
+
+# Check if everything is ready to build
+check:
+    @echo "Checking dependencies..."
+    @command -v cmake >/dev/null 2>&1 || { echo "cmake is required but not installed"; exit 1; }
+    @command -v node >/dev/null 2>&1 || { echo "node is required but not installed"; exit 1; }
+    @echo "All dependencies found"

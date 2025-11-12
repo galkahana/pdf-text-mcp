@@ -1,19 +1,10 @@
 {
   "name": "pdf-text-mcp",
   "version": "1.0.0",
-  "description": "MCP service for PDF text extraction using pdf-text-extraction library",
+  "description": "Monorepo for PDF text extraction via MCP - contains independent packages for native parser, MCP server, and example AI agent",
   "private": true,
-  "workspaces": [
-    "packages/pdf-parser",
-    "packages/mcp-server"
-  ],
   "scripts": {
-    "build": "npm run build --workspaces",
-    "test": "npm run test --workspaces",
-    "lint": "eslint packages/*/src --ext .ts,.js",
-    "format": "prettier --write packages/*/src/**/*.{ts,js,json}",
-    "clean": "npm run clean --workspaces",
-    "dev": "npm run dev --workspace=mcp-server"
+    "postinstall": "echo 'Note: Each package is independent. Use just commands to build/test. Run: just help'"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -22,13 +13,11 @@
     "eslint": "^8.55.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.0.1",
-    "jest": "^29.7.0",
     "prettier": "^3.1.0",
     "typescript": "^5.3.0"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "node": ">=18.0.0"
   },
   "repository": {
     "type": "git",
@@ -39,7 +28,8 @@
     "text-extraction",
     "mcp",
     "server",
-    "parsing"
+    "parsing",
+    "monorepo"
   ],
   "author": "Gal Kahana",
   "license": "MIT"

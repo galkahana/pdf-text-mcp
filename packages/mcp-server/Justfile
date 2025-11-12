@@ -1,0 +1,62 @@
+# MCP Server Package - Build and Test Commands
+
+# Build the TypeScript package
+build:
+    npx --prefix ../.. tsc -p tsconfig.json
+
+# Run tests
+test:
+    jest
+
+# Run tests in watch mode
+test-watch:
+    jest --watch
+
+# Run tests with coverage
+test-coverage:
+    jest --coverage
+
+# Run manual integration tests
+test-manual:
+    node manual-tests/protocol-integration.js
+
+# Run all tests (unit + manual)
+test-all: test test-manual
+
+# Lint check
+lint:
+    eslint src --ext .ts
+
+# Auto-fix linting issues
+lint-fix:
+    eslint src --ext .ts --fix
+
+# Format code
+format:
+    prettier --write "src/**/*.ts"
+
+# Check formatting without modifying
+format-check:
+    prettier --check "src/**/*.ts"
+
+# Run all checks (lint + format + test)
+check: lint format-check test
+
+# Clean build artifacts
+clean:
+    rm -rf dist/
+
+# Development mode with TypeScript watch
+dev:
+    npx --prefix ../.. tsc -p tsconfig.json --watch
+
+# Start the MCP server
+start:
+    node dist/index.js
+
+# Install dependencies
+install:
+    npm install
+
+# Build and start
+run: build start

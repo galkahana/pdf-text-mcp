@@ -6,12 +6,44 @@ TypeScript library for PDF text and metadata extraction with native C++ bindings
 
 ```bash
 npm install
-npm run build
 ```
 
 ## Building
 
-The package includes a native C++ addon that must be compiled:
+The package includes a native C++ addon that must be compiled.
+
+### Using Just (Recommended)
+
+```bash
+# Install dependencies
+just install
+
+# Full build (native addon + TypeScript)
+just build
+
+# Build only native addon
+just build-native
+
+# Rebuild from scratch
+just rebuild
+
+# Run tests
+just test
+
+# Run tests with coverage
+just test-coverage
+
+# Clean build artifacts
+just clean
+
+# Development mode (watch)
+just dev
+
+# See all available commands
+just --list
+```
+
+### Using npm
 
 ```bash
 # Full build (native addon + TypeScript)

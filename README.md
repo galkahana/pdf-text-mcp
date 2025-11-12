@@ -45,22 +45,52 @@ pdf-text-mcp/
 
 ### Prerequisites
 
+**Required:**
+- [just](https://github.com/casey/just) - command runner (install: `cargo install just` or via package manager)
 - Node.js >= 18.0.0
 - C++17 compiler
 - CMake >= 3.15
 - ICU library
 
-### Installation
+**For Python agent:**
+- Python >= 3.10
+- [uv](https://docs.astral.sh/uv/) - Python package manager
+
+### Quick Setup
 
 ```bash
-# Install dependencies
-npm install
+# Check if all required tools are installed
+just doctor
 
-# Build everything
-npm run build
+# Install dependencies for all packages
+just install-all
+
+# Build all packages
+just build-all
 
 # Run tests
-npm test
+just test-all
+
+# Run a quick demo
+just demo
+```
+
+### Working with Individual Packages
+
+Each package is independent with its own `Justfile`:
+
+```bash
+# Build specific package
+cd packages/pdf-parser && just build
+cd packages/mcp-server && just build
+
+# Test specific package
+cd packages/pdf-parser && just test
+cd packages/mcp-server && just test
+cd packages/example-agent && just test
+
+# See available commands for a package
+cd packages/<name> && just --list
 ```
 
 For detailed usage instructions:
@@ -70,21 +100,34 @@ For detailed usage instructions:
 
 ## Available Commands
 
+**Root-level commands** (convenience):
+
 ```bash
-# Build all packages
-npm run build
-
-# Test all packages
-npm test
-
-# Build specific package
-npm run build --workspace=@pdf-text-mcp/pdf-parser
-npm run build --workspace=@pdf-text-mcp/mcp-server
-
-# Test specific package
-npm test --workspace=@pdf-text-mcp/pdf-parser
-npm test --workspace=@pdf-text-mcp/mcp-server
+just help           # Show all available commands
+just list           # List all packages
+just doctor         # Check if required tools are installed
+just setup          # Install dependencies and build everything
+just build-all      # Build all packages in dependency order
+just test-all       # Test all packages
+just check-all      # Run all checks (lint, format, type-check, test)
+just clean-all      # Clean all packages
+just install-all    # Install dependencies for all packages
+just demo           # Build and run example agent demo
 ```
+
+**Package-level commands** (run inside package directory):
+
+Common commands available in all packages:
+- `just build` - Build the package
+- `just test` - Run tests
+- `just clean` - Clean build artifacts
+- `just install` - Install dependencies
+
+Additional commands per package type:
+- **Node.js packages** (pdf-parser, mcp-server): `dev`, `lint`, `format`
+- **Python package** (example-agent): `lint`, `format`, `type-check`, `check`, `demo`
+
+Run `just --list` inside any package to see all available commands.
 
 ## Features
 
