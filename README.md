@@ -170,43 +170,51 @@ Example AI agent demonstrating PDF summarization using PydanticAI.
 - PDF summarization, text extraction, and metadata analysis
 - Command-line interface with `uv`
 
-## Future Features
+## Roadmap
 
-### High Priority
+### Phase 5: Server Deployment & Infrastructure 🚀
+Deploy MCP server as a remote service for production use.
 
-1. **True Timeout with Async Workers**
-   - N-API async workers for true cancellation
-   - Non-blocking extraction on separate threads
-   - Immediate resource cleanup on timeout
+- Docker containerization with multi-stage builds
+- Kubernetes deployment manifests (targeting GKE)
+- Helm chart for parameterized deployments
+- HTTP/WebSocket transport (alternative to stdio)
+- Health checks and graceful shutdown
+- Authentication (TBD during implementation)
 
-2. **Password-Protected PDF Support**
-   - Owner and user password handling
-   - Password parameter in extraction API
-   - Better error messages for encrypted files
+### Phase 6: Observability & Operations 📊
+Production-ready monitoring, logging, and metrics.
 
-### Medium Priority
+- Structured JSON logging with correlation IDs
+- Prometheus-compatible metrics (requests, errors, latency, PDF stats)
+- Log aggregation with Loki
+- Alerting integration
+- Distributed tracing with OpenTelemetry
 
-3. **Advanced Bidi Configuration**
-   - Optional RTL direction support
-   - Auto-detect text direction
-   - Per-document bidi settings
+### Phase 7: True Timeout with Async Workers ⏱️
+Proper cancellation and resource cleanup.
 
-4. **Streaming API**
-   - Page-by-page extraction
-   - Reduced memory for large PDFs
-   - AsyncGenerator interface
+- N-API async workers for non-blocking extraction
+- Worker threads for PDF processing
+- True timeout cancellation (not just promise rejection)
+- Immediate resource cleanup
+- Thread pool management
 
-5. **Bidi Integration Test**
-   - Test PDF with Hebrew/Arabic text
-   - Verify text ordering correctness
-   - Runtime ICU validation
+### Phase 8: Password-Protected PDFs 🔐
+Handle encrypted PDF documents.
 
-### Lower Priority
+- Password parameter in extraction APIs
+- Owner and user password support
+- Clear error messages for encrypted files
+- Password validation and security
 
-6. **Performance Metrics**
-   - Detailed performance tracking
-   - Memory usage monitoring
-   - Benchmark suite
+### Phase 9: Advanced Bidi Configuration 🔤
+Configurable text direction handling.
+
+- Optional RTL direction support
+- Auto-detect text direction
+- Per-document bidi settings
+- API updates for bidi options
 
 ## Development
 
