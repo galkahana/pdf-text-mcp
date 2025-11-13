@@ -10,12 +10,16 @@ set(USE_BIDI ON CACHE BOOL "Enable bidirectional text support" FORCE)
 
 # Fetch pdf-text-extraction library
 include(FetchContent)
+
+# Set extract timestamp policy for CMake 3.24+ (if supported)
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
 FetchContent_Declare(
   pdf-text-extraction
   URL https://github.com/galkahana/pdf-text-extraction/archive/refs/tags/v1.1.9.tar.gz
   URL_HASH SHA256=5bd63becb30cbf155a164dabde8df98cb5cc597bb0904f42367234df51873607
-  DOWNLOAD_EXTRACT_TIMESTAMP FALSE
-  FIND_PACKAGE_ARGS
 )
 FetchContent_MakeAvailable(pdf-text-extraction)
 
