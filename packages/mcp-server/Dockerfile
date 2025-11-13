@@ -54,7 +54,7 @@ FROM node:20-slim
 
 # Install runtime dependencies for ICU (required for bidi text support)
 RUN apt-get update && apt-get install -y \
-    libicu67 \
+    libicu72 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for security
