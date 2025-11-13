@@ -5,11 +5,13 @@
 FROM node:20-bullseye AS builder
 
 # Install build dependencies for native compilation
+# Note: Installing CMake 3.24+ via pip to support FetchContent DOWNLOAD_EXTRACT_TIMESTAMP
 RUN apt-get update && apt-get install -y \
     build-essential \
-    cmake \
     python3 \
+    python3-pip \
     libicu-dev \
+    && pip3 install cmake \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
