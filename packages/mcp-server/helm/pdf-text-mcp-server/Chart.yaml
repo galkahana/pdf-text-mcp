@@ -1,0 +1,17 @@
+apiVersion: v2
+name: pdf-text-mcp-server
+description: A Helm chart for PDF Text Extraction MCP Server
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - mcp
+  - pdf
+  - text-extraction
+  - ai
+maintainers:
+  - name: Gal Kahana
+    email: galkahana@gmail.com
+home: https://github.com/galkahana/pdf-text-mcp
+sources:
+  - https://github.com/galkahana/pdf-text-mcp

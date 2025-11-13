@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pdf-text-mcp-server.fullname" . }}
+  labels:
+    {{- include "pdf-text-mcp-server.labels" . | nindent 4 }}
+data:
+  TRANSPORT_MODE: {{ .Values.config.transportMode | quote }}
+  PORT: {{ .Values.config.port | quote }}
+  HOST: {{ .Values.config.host | quote }}
+  MAX_FILE_SIZE: {{ .Values.config.maxFileSize | quote }}
+  TIMEOUT: {{ .Values.config.timeout | quote }}

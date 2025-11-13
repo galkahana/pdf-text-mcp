@@ -70,11 +70,25 @@ The server communicates via stdio using the MCP protocol.
 
 ## Configuration
 
-Environment variables (all optional):
+### Transport Modes
+
+The server supports two transport modes:
+
+1. **stdio** (default) - For local Claude Desktop integration
+2. **http** - For remote deployment with HTTP/SSE transport
+
+### Environment Variables
 
 ```bash
-MAX_FILE_SIZE=104857600  # 100MB (default)
-TIMEOUT=120000           # 120s (default)
+# Transport Configuration
+TRANSPORT_MODE=stdio        # 'stdio' or 'http' (default: stdio)
+PORT=3000                   # HTTP server port (default: 3000, http mode only)
+HOST=0.0.0.0               # HTTP server host (default: 0.0.0.0, http mode only)
+API_KEY=your-key           # Optional API key for authentication (http mode only)
+
+# Processing Configuration
+MAX_FILE_SIZE=104857600     # 100MB (default)
+TIMEOUT=30000               # 30s (default)
 ```
 
 ### Claude Desktop Setup
@@ -97,14 +111,99 @@ Add to `claude_desktop_config.json`:
 
 Restart Claude Desktop after making changes.
 
+## Remote Deployment
+
+The server can be deployed remotely using Docker and Kubernetes.
+
+### Quick Start - Docker
+
+```bash
+# Build image
+just docker-build
+
+# Run container
+just docker-run
+
+# Test endpoints
+curl http://localhost:3000/health
+curl http://localhost:3000/ready
+curl http://localhost:3000/metrics
+```
+
+### Quick Start - Minikube
+
+```bash
+# Start minikube, build, and deploy
+just minikube-all
+
+# Get service URL
+just minikube-url
+
+# Test deployment
+just minikube-test
+```
+
+### Production Deployment
+
+For production Kubernetes deployments:
+
+```bash
+# Using kubectl with manifests
+just k8s-apply
+
+# Using Helm (recommended)
+helm install pdf-text-mcp ./helm/pdf-text-mcp-server \
+  --namespace pdf-text-mcp \
+  --create-namespace \
+  --set image.repository=gcr.io/your-project/pdf-text-mcp-server \
+  --set image.tag=v1.0.0 \
+  --set apiKey=your-secret-key
+```
+
+See [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md) for comprehensive deployment guide.
+
+### HTTP/SSE Endpoints
+
+When running in HTTP mode:
+
+- **MCP Protocol**: `POST /mcp` - MCP protocol endpoint (SSE streaming)
+- **Health Check**: `GET /health` - Liveness probe
+- **Readiness Check**: `GET /ready` - Readiness probe
+- **Metrics**: `GET /metrics` - Basic metrics (requests, errors, uptime, memory)
+
+### API Authentication
+
+To enable API key authentication:
+
+```bash
+# Docker
+docker run -p 3000:3000 \
+  -e TRANSPORT_MODE=http \
+  -e API_KEY=your-secret-key \
+  pdf-text-mcp-server:latest
+
+# Kubernetes (Helm)
+helm install pdf-text-mcp ./helm/pdf-text-mcp-server \
+  --set apiKey=your-secret-key
+
+# Then include in requests
+curl -X POST http://localhost:3000/mcp \
+  -H "Authorization: Bearer your-secret-key" \
+  -H "Content-Type: application/json" \
+  -d '...'
+```
+
 ## Tools
 
 ### `extract_text`
 
-Extract text content from PDF file.
+Extract text content from PDF file or base64-encoded content.
 
 **Parameters:**
-- `filePath` (string) - Path to PDF file
+- `filePath` (string, optional) - Path to PDF file (for local/stdio mode)
+- `fileContent` (string, optional) - Base64-encoded PDF content (for remote/http mode)
+
+One of `filePath` or `fileContent` must be provided.
 
 **Returns:**
 ```json
@@ -118,10 +217,13 @@ Extract text content from PDF file.
 
 ### `extract_metadata`
 
-Extract metadata from PDF file.
+Extract metadata from PDF file or base64-encoded content.
 
 **Parameters:**
-- `filePath` (string) - Path to PDF file
+- `filePath` (string, optional) - Path to PDF file (for local/stdio mode)
+- `fileContent` (string, optional) - Base64-encoded PDF content (for remote/http mode)
+
+One of `filePath` or `fileContent` must be provided.
 
 **Returns:**
 ```json
