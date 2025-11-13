@@ -26,11 +26,19 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
     "@pdf-text-mcp/pdf-parser": "file:../pdf-parser",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "ws": "^8.18.3",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
     "@types/jest": "^29.5.0",
+    "@types/multer": "^2.0.0",
     "@types/node": "^20.10.0",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
     "eslint": "^8.55.0",
