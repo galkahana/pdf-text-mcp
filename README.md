@@ -172,15 +172,34 @@ Example AI agent demonstrating PDF summarization using PydanticAI.
 
 ## Roadmap
 
-### Phase 5: Server Deployment & Infrastructure 🚀
-Deploy MCP server as a remote service for production use.
+### Phase 5: Server Deployment & Infrastructure ✅
+**Status**: Complete - [PR #6](https://github.com/galkahana/pdf-text-mcp/pull/6) merged
 
-- Docker containerization with multi-stage builds
-- Kubernetes deployment manifests (targeting GKE)
-- Helm chart for parameterized deployments
-- HTTP/WebSocket transport (alternative to stdio)
-- Health checks and graceful shutdown
-- Authentication (TBD during implementation)
+- ✅ Docker containerization with multi-stage builds (ARM64 support)
+- ✅ Kubernetes deployment manifests with Helm chart
+- ✅ HTTP/SSE transport (MCP SDK StreamableHTTPServerTransport)
+- ✅ Health/readiness/liveness probes
+- ✅ API key authentication (Bearer token)
+- ✅ 4 environment configurations (prod, dev, minikube, default)
+- ✅ Comprehensive documentation (k8s and Helm READMEs)
+
+### Phase 5.5: Python Agent Integration Fix 🔧
+**Status**: Next priority (detour before Phase 6)
+
+Fix PydanticAI example-agent integration with MCP protocol and Gemini.
+
+**Current Issue**:
+- MCP server HTTP/SSE transport works correctly (verified with curl)
+- Python agent fails with Gemini schema validation errors
+- Error: `GenerateContentConfig` validation - MCP tools schema incompatible with Gemini's function calling format
+- Affects both stdio and HTTP/SSE transports
+
+**Scope**:
+- Investigate PydanticAI MCP client implementation
+- Debug MCP tool schema translation to Gemini format
+- Test with alternative models (Claude, OpenAI) to isolate Gemini-specific issues
+- Fix or document workarounds for the integration
+- Ensure end-to-end PDF extraction works via remote MCP server
 
 ### Phase 6: Observability & Operations 📊
 Production-ready monitoring, logging, and metrics.
