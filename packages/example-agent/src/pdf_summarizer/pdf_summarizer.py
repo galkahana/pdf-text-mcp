@@ -4,42 +4,68 @@ import os
 from pathlib import Path
 
 from pydantic_ai import Agent
-from pydantic_ai.mcp import MCPServerStdio
+from pydantic_ai.mcp import MCPServerSSE, MCPServerStdio
 
 
 class PDFSummarizer:
     """AI agent that extracts and summarizes PDF content via MCP."""
 
-    def __init__(self, mcp_server_path: Path | None = None):
+    def __init__(
+        self,
+        mcp_server_path: Path | None = None,
+        mcp_server_url: str | None = None,
+        api_key: str | None = None,
+    ):
         """Initialize the PDF summarizer agent.
 
         Args:
             mcp_server_path: Path to the MCP server executable (mcp-server/dist/index.js).
-                           If not provided, will try to find it relative to this package.
+                           Used for stdio transport (local mode).
+                           If neither path nor URL is provided, will try to find path relative to this package.
+            mcp_server_url: URL to a remote MCP server HTTP/SSE endpoint.
+                          Used for HTTP/SSE transport (remote mode).
+                          Takes precedence over mcp_server_path if both are provided.
+            api_key: Optional API key for authenticating with remote MCP server.
+                    Only used when mcp_server_url is provided.
         """
-        # Find MCP server path
-        if mcp_server_path is None:
-            # Default: ../../mcp-server/dist/index.js relative to this file
-            current_file = Path(__file__)
-            mcp_server_path = (
-                current_file.parent.parent.parent.parent / "mcp-server" / "dist" / "index.js"
-            )
+        # Determine transport mode: HTTP/SSE (remote) or stdio (local)
+        if mcp_server_url:
+            # Remote mode: HTTP/SSE transport
+            headers = {}
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
 
-        if not mcp_server_path.exists():
-            raise FileNotFoundError(
-                f"MCP server not found at {mcp_server_path}. "
-                f"Make sure to build the mcp-server package first with: "
-                f"npm run build --workspace=@pdf-text-mcp/mcp-server"
+            self.mcp_server = MCPServerSSE(
+                url=mcp_server_url,
+                headers=headers if headers else None,
+                timeout=30,
+                read_timeout=60,
             )
+        else:
+            # Local mode: stdio transport
+            # Find MCP server path
+            if mcp_server_path is None:
+                # Default: ../../mcp-server/dist/index.js relative to this file
+                current_file = Path(__file__)
+                mcp_server_path = (
+                    current_file.parent.parent.parent.parent / "mcp-server" / "dist" / "index.js"
+                )
 
-        # Initialize MCP server connection
-        # Pass environment variables to the MCP server subprocess
-        self.mcp_server = MCPServerStdio(
-            "node",
-            args=[str(mcp_server_path)],
-            timeout=30,
-            env=os.environ.copy(),  # Pass all env vars (MAX_FILE_SIZE, TIMEOUT, etc.)
-        )
+            if not mcp_server_path.exists():
+                raise FileNotFoundError(
+                    f"MCP server not found at {mcp_server_path}. "
+                    f"Make sure to build the mcp-server package first with: "
+                    f"npm run build --workspace=@pdf-text-mcp/mcp-server"
+                )
+
+            # Initialize MCP server connection via stdio
+            # Pass environment variables to the MCP server subprocess
+            self.mcp_server = MCPServerStdio(
+                "node",
+                args=[str(mcp_server_path)],
+                timeout=30,
+                env=os.environ.copy(),  # Pass all env vars (MAX_FILE_SIZE, TIMEOUT, etc.)
+            )
 
         # Create PydanticAI agent with Google Gemini
         self.agent = Agent(

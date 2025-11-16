@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pdf-text-mcp-config
+  namespace: pdf-text-mcp
+  labels:
+    app: pdf-text-mcp-server
+data:
+  TRANSPORT_MODE: "http"
+  PORT: "3000"
+  HOST: "0.0.0.0"
+  MAX_FILE_SIZE: "104857600"  # 100MB
+  TIMEOUT: "30000"  # 30 seconds

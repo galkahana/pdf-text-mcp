@@ -60,3 +60,183 @@ install:
 
 # Build and start
 run: build start
+
+# === Docker Commands ===
+
+# Build Docker image for development
+docker-build:
+    docker build -t pdf-text-mcp-server:dev -f Dockerfile ../..
+
+# Build Docker image for production (with tag)
+docker-build-prod tag:
+    docker build -t pdf-text-mcp-server:{{tag}} -f Dockerfile ../..
+
+# Run Docker container locally
+docker-run:
+    docker run --rm -p 3000:3000 \
+        -e TRANSPORT_MODE=http \
+        -e PORT=3000 \
+        pdf-text-mcp-server:dev
+
+# Run Docker container with API key
+docker-run-secure api_key:
+    docker run --rm -p 3000:3000 \
+        -e TRANSPORT_MODE=http \
+        -e PORT=3000 \
+        -e API_KEY={{api_key}} \
+        pdf-text-mcp-server:dev
+
+# Run Docker container in background
+docker-run-bg:
+    docker run -d --name pdf-text-mcp-server -p 3000:3000 \
+        -e TRANSPORT_MODE=http \
+        -e PORT=3000 \
+        pdf-text-mcp-server:dev
+
+# Stop and remove Docker container
+docker-stop:
+    docker stop pdf-text-mcp-server && docker rm pdf-text-mcp-server
+
+# Test Docker container health
+docker-test:
+    curl http://localhost:3000/health
+    curl http://localhost:3000/ready
+    curl http://localhost:3000/metrics
+
+# Start services with docker-compose
+docker-compose-up:
+    docker-compose up -d
+
+# Stop services with docker-compose
+docker-compose-down:
+    docker-compose down
+
+# View docker-compose logs
+docker-compose-logs:
+    docker-compose logs -f
+
+# === Kubernetes Commands ===
+
+# Apply all Kubernetes manifests
+k8s-apply:
+    kubectl apply -f k8s/namespace.yaml
+    kubectl apply -f k8s/configmap.yaml
+    kubectl apply -f k8s/deployment.yaml
+    kubectl apply -f k8s/service.yaml
+
+# Delete all Kubernetes resources
+k8s-delete:
+    kubectl delete -f k8s/service.yaml
+    kubectl delete -f k8s/deployment.yaml
+    kubectl delete -f k8s/configmap.yaml
+    kubectl delete -f k8s/namespace.yaml
+
+# Get Kubernetes pod status
+k8s-status:
+    kubectl get pods -n pdf-text-mcp
+
+# View Kubernetes logs
+k8s-logs:
+    kubectl logs -n pdf-text-mcp -l app=pdf-text-mcp-server -f
+
+# Port forward to local machine
+k8s-port-forward:
+    kubectl port-forward -n pdf-text-mcp svc/pdf-text-mcp-server 3000:80
+
+# === Helm Commands ===
+
+# Validate Helm chart
+helm-lint:
+    helm lint helm/pdf-text-mcp-server
+
+# Preview Helm templates
+helm-template:
+    helm template pdf-text-mcp helm/pdf-text-mcp-server
+
+# Install Helm chart (production)
+helm-install:
+    helm install pdf-text-mcp helm/pdf-text-mcp-server \
+        --create-namespace \
+        --namespace pdf-text-mcp
+
+# Install Helm chart with custom values
+helm-install-custom values_file:
+    helm install pdf-text-mcp helm/pdf-text-mcp-server \
+        --create-namespace \
+        --namespace pdf-text-mcp \
+        -f {{values_file}}
+
+# Upgrade Helm release
+helm-upgrade:
+    helm upgrade pdf-text-mcp helm/pdf-text-mcp-server \
+        --namespace pdf-text-mcp
+
+# Uninstall Helm release
+helm-uninstall:
+    helm uninstall pdf-text-mcp --namespace pdf-text-mcp
+
+# Get Helm release status
+helm-status:
+    helm status pdf-text-mcp --namespace pdf-text-mcp
+
+# === Minikube Commands ===
+
+# Start minikube
+minikube-start:
+    minikube start --driver=docker --cpus=4 --memory=8192
+
+# Stop minikube
+minikube-stop:
+    minikube stop
+
+# Delete minikube cluster
+minikube-delete:
+    minikube delete
+
+# Build image in minikube's Docker daemon
+minikube-build:
+    eval $(minikube docker-env) && docker build -t pdf-text-mcp-server:dev -f Dockerfile ../..
+
+# Deploy to minikube using Helm with dev values
+minikube-deploy:
+    helm upgrade --install pdf-text-mcp ./helm/pdf-text-mcp-server \
+        --create-namespace \
+        --namespace pdf-text-mcp \
+        -f ./helm/pdf-text-mcp-server/values-dev.yaml
+
+# Build and deploy to minikube (complete workflow)
+minikube-full: minikube-build minikube-deploy
+    @echo "✅ Built and deployed to minikube"
+    @echo "Run 'just minikube-url' to get the service URL"
+
+# Get minikube service URL
+minikube-url:
+    minikube service pdf-text-mcp-server --namespace pdf-text-mcp --url
+
+# Open minikube dashboard
+minikube-dashboard:
+    minikube dashboard
+
+# View logs in minikube
+minikube-logs:
+    kubectl logs -n pdf-text-mcp -l app.kubernetes.io/name=pdf-text-mcp-server -f
+
+# Test minikube deployment
+minikube-test:
+    #!/usr/bin/env bash
+    URL=$(minikube service pdf-text-mcp-server --namespace pdf-text-mcp --url)
+    echo "Testing health endpoint..."
+    curl ${URL}/health
+    echo "\nTesting ready endpoint..."
+    curl ${URL}/ready
+    echo "\nTesting metrics endpoint..."
+    curl ${URL}/metrics
+
+# === Combined Commands ===
+
+# Complete local Docker workflow
+local: docker-build docker-run
+
+# Complete minikube workflow (start, build, deploy)
+minikube-all: minikube-start minikube-full
+    @echo "✅ Minikube cluster running with deployed application"

@@ -1,0 +1,59 @@
+# Node modules (will be installed in container)
+node_modules/
+npm-debug.log
+
+# Build artifacts (will be built in container)
+dist/
+build/
+*.node
+
+# Test files
+__tests__/
+*.test.ts
+*.test.js
+test-materials/
+coverage/
+manual-tests/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+docs/
+*.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Kubernetes/Helm (not needed in image)
+k8s/
+helm/
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# TypeScript config
+tsconfig.json
+jest.config.js
+
+# Justfile
+Justfile

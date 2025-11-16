@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pdf-text-mcp
+  labels:
+    name: pdf-text-mcp
+    app: pdf-text-mcp-server

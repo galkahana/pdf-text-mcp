@@ -1,0 +1,34 @@
+# Example ingress configuration
+# Copy this to ingress.yaml and customize for your environment
+# Requires an ingress controller (nginx, traefik, etc.)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pdf-text-mcp-ingress
+  namespace: pdf-text-mcp
+  labels:
+    app: pdf-text-mcp-server
+  annotations:
+    # Nginx ingress annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    # Uncomment for SSL/TLS
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  # Uncomment for TLS
+  # tls:
+  # - hosts:
+  #   - mcp.example.com
+  #   secretName: pdf-text-mcp-tls
+  rules:
+  - host: mcp.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: pdf-text-mcp-server
+            port:
+              number: 80

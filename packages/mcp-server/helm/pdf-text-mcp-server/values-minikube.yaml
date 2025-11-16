@@ -1,0 +1,67 @@
+# Minikube values for pdf-text-mcp-server
+# Optimized for local development and testing with Minikube
+
+replicaCount: 1
+
+image:
+  repository: pdf-text-mcp-server
+  pullPolicy: IfNotPresent
+  tag: "optimized"
+
+serviceAccount:
+  create: false
+
+# Minimal resources for local development
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# Disable autoscaling for Minikube
+autoscaling:
+  enabled: false
+
+# Use NodePort for easy access in Minikube
+service:
+  type: NodePort
+  port: 80
+  targetPort: 3000
+
+# No ingress needed for Minikube (use port-forward or NodePort)
+ingress:
+  enabled: false
+
+# Development configuration with lower limits
+config:
+  transportMode: "http"
+  port: 3000
+  host: "0.0.0.0"
+  maxFileSize: 52428800  # 50MB (lower for dev)
+  timeout: 30000  # 30 seconds
+
+# No API key for local development
+apiKey: ""
+
+# Faster probes for quicker feedback
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 15
+  timeoutSeconds: 2
+  successThreshold: 1
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: http
+  initialDelaySeconds: 3
+  periodSeconds: 5
+  timeoutSeconds: 2
+  successThreshold: 1
+  failureThreshold: 2
