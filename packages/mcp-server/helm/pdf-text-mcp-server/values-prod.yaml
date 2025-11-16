@@ -1,0 +1,93 @@
+# Production values for pdf-text-mcp-server
+# Override defaults in values.yaml for production deployment
+
+replicaCount: 5
+
+image:
+  repository: gcr.io/your-project/pdf-text-mcp-server
+  pullPolicy: Always
+  tag: "v1.0.0"  # Use specific version tags in production
+
+# Enable service account for GCP workload identity
+serviceAccount:
+  create: true
+  annotations:
+    iam.gke.io/gcp-service-account: "mcp-server@your-project.iam.gserviceaccount.com"
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "3000"
+  prometheus.io/path: "/metrics"
+
+# Production resource limits
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 1000m
+    memory: 1Gi
+
+# Enable autoscaling for production
+autoscaling:
+  enabled: true
+  minReplicas: 5
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Enable ingress with TLS
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+  hosts:
+    - host: mcp.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: pdf-text-mcp-tls
+      hosts:
+        - mcp.example.com
+
+# Production configuration
+config:
+  transportMode: "http"
+  port: 3000
+  host: "0.0.0.0"
+  maxFileSize: 104857600  # 100MB
+  timeout: 30000  # 30 seconds
+
+# API Key authentication (set during deployment)
+# helm install pdf-mcp ./helm-chart -f values-prod.yaml --set apiKey=your-secret-key
+apiKey: ""
+
+# Pod topology spread for high availability
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - pdf-text-mcp-server
+          topologyKey: kubernetes.io/hostname
+
+# Node selector for dedicated node pools (optional)
+# nodeSelector:
+#   workload: mcp-server
+
+# Tolerations for dedicated nodes (optional)
+# tolerations:
+#   - key: "workload"
+#     operator: "Equal"
+#     value: "mcp-server"
+#     effect: "NoSchedule"

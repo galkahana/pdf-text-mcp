@@ -5,10 +5,10 @@
 replicaCount: 3
 
 image:
-  repository: gcr.io/your-project/pdf-text-mcp-server
-  pullPolicy: Always
+  repository: pdf-text-mcp-server
+  pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  tag: "optimized"
 
 imagePullSecrets: []
 nameOverride: ""
