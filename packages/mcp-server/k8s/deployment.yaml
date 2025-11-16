@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: mcp-server
-        image: pdf-text-mcp-server:latest
+        image: pdf-text-mcp-server:optimized
         imagePullPolicy: IfNotPresent
         ports:
         - name: http

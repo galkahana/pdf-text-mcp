@@ -17,6 +17,9 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
+# Copy root tsconfig.json (extended by package tsconfigs)
+COPY tsconfig.json .
+
 # Copy package files for both packages
 COPY packages/pdf-parser/package*.json packages/pdf-parser/
 COPY packages/mcp-server/package*.json packages/mcp-server/
@@ -28,8 +31,17 @@ RUN npm ci
 # Copy pdf-parser source code
 COPY packages/pdf-parser/ .
 
-# Build native addon
-RUN npm run build:native
+# Set compiler flags for standard Release optimization
+# -O2: Standard optimization for good performance
+# -g0: Disable debug symbols to save memory
+# CMAKE_POSITION_INDEPENDENT_CODE: Enable -fPIC for all targets (required for ARM64 shared libraries)
+ENV CXXFLAGS="-O2 -g0"
+ENV CFLAGS="-O2 -g0"
+ENV CMAKE_CXX_FLAGS="-O2 -g0 -fPIC"
+ENV CMAKE_C_FLAGS="-O2 -g0 -fPIC"
+
+# Build native addon (sequential build to reduce memory usage)
+RUN npm run build:native -- --jobs 1 --CDCMAKE_POSITION_INDEPENDENT_CODE=ON
 
 # Build TypeScript
 RUN npm run build
@@ -52,11 +64,15 @@ WORKDIR /app/packages/mcp-server
 RUN npm prune --production
 
 # Stage 2: Runtime - Slim image with only production dependencies
-FROM node:20-slim
+# Use bullseye-slim to match builder stage (Debian 11) for compatible library versions
+FROM node:20-bullseye-slim
 
-# Install runtime dependencies for ICU (required for bidi text support)
+# Install runtime dependencies for native addon
+# - libicu67: ICU Unicode library (for bidirectional text support)
+# - libssl1.1: OpenSSL 1.1 (crypto library required by pdf-text-extraction)
 RUN apt-get update && apt-get install -y \
-    libicu72 \
+    libicu67 \
+    libssl1.1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for security
