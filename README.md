@@ -173,7 +173,7 @@ Example AI agent demonstrating PDF summarization using PydanticAI.
 ## Roadmap
 
 ### Phase 5: Server Deployment & Infrastructure ✅
-**Status**: Complete - [PR #6](https://github.com/galkahana/pdf-text-mcp/pull/6) merged
+**Status**: Complete - [PR #6](https://github.com/galkahana/pdf-text-mcp/pull/6)
 
 - ✅ Docker containerization with multi-stage builds (ARM64 support)
 - ✅ Kubernetes deployment manifests with Helm chart
@@ -181,27 +181,26 @@ Example AI agent demonstrating PDF summarization using PydanticAI.
 - ✅ Health/readiness/liveness probes
 - ✅ API key authentication (Bearer token)
 - ✅ 4 environment configurations (prod, dev, minikube, default)
-- ✅ Comprehensive documentation (k8s and Helm READMEs)
 
-### Phase 5.5: Python Agent Integration Fix 🔧
-**Status**: Next priority (detour before Phase 6)
+### Phase 5.5: Python Agent Integration Fix ✅
+**Status**: Complete - [PR #7](https://github.com/galkahana/pdf-text-mcp/pull/7)
 
-Fix PydanticAI example-agent integration with MCP protocol and Gemini.
+- ✅ Fixed Gemini schema validation errors (removed `oneOf` constraints)
+- ✅ Updated test materials to GalKahanaCV2025.pdf
+- ✅ All agent commands working (extract, metadata, summarize)
+- ✅ Both stdio and HTTP/SSE transports functional
 
-**Current Issue**:
-- MCP server HTTP/SSE transport works correctly (verified with curl)
-- Python agent fails with Gemini schema validation errors
-- Error: `GenerateContentConfig` validation - MCP tools schema incompatible with Gemini's function calling format
-- Affects both stdio and HTTP/SSE transports
+### Phase 5.6: Build Optimization & Cleanup ✅
+**Status**: Complete - [PR #8](https://github.com/galkahana/pdf-text-mcp/pull/8)
 
-**Scope**:
-- Investigate PydanticAI MCP client implementation
-- Debug MCP tool schema translation to Gemini format
-- Test with alternative models (Claude, OpenAI) to isolate Gemini-specific issues
-- Fix or document workarounds for the integration
-- Ensure end-to-end PDF extraction works via remote MCP server
+- ✅ Updated to pdf-text-extraction v1.1.10 with encoding optimization
+- ✅ Build time: 7 minutes → 2:39 (62% faster)
+- ✅ Cleaned up Dockerfile (13 lines → 3 lines)
+- ✅ Enabled parallel compilation
+- ✅ Docker image: 301MB
 
 ### Phase 6: Observability & Operations 📊
+**Status**: Next (planned)
 Production-ready monitoring, logging, and metrics.
 
 - Structured JSON logging with correlation IDs
