@@ -5,6 +5,9 @@ project(pdf_parser_native)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Enable position independent code (required for shared libraries, especially on ARM64)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Enable bidi support - must be set before FetchContent to pass down to pdf-text-extraction
 set(USE_BIDI ON CACHE BOOL "Enable bidirectional text support" FORCE)
 
@@ -18,8 +21,8 @@ endif()
 
 FetchContent_Declare(
   pdf-text-extraction
-  URL https://github.com/galkahana/pdf-text-extraction/archive/refs/tags/v1.1.9.tar.gz
-  URL_HASH SHA256=5bd63becb30cbf155a164dabde8df98cb5cc597bb0904f42367234df51873607
+  URL https://github.com/galkahana/pdf-text-extraction/archive/refs/tags/v1.1.10.tar.gz
+  URL_HASH SHA256=006581ecf5c401300b4dfc611a5c1265e1afd40549a45d850b26a5e192b0d0a0
 )
 FetchContent_MakeAvailable(pdf-text-extraction)
 
