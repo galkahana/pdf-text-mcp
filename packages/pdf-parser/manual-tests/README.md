@@ -46,7 +46,7 @@ npm run test:all
 
 The tests use real PDFs from the test materials:
 - `HighLevelContentContext.pdf` - Simple single-page PDF with shapes
-- `GalKahanaCV2022.pdf` - Multi-page document with Unicode metadata
+- `GalKahanaCV2025.pdf` - Multi-page document with Unicode metadata
 
 ## Output
 
