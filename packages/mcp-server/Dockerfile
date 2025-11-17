@@ -31,19 +31,7 @@ RUN npm ci
 # Copy pdf-parser source code
 COPY packages/pdf-parser/ .
 
-# Set compiler flags for standard Release optimization
-# -O2: Standard optimization for good performance
-# -g0: Disable debug symbols to save memory
-# CMAKE_POSITION_INDEPENDENT_CODE: Enable -fPIC for all targets (required for ARM64 shared libraries)
-ENV CXXFLAGS="-O2 -g0"
-ENV CFLAGS="-O2 -g0"
-ENV CMAKE_CXX_FLAGS="-O2 -g0 -fPIC"
-ENV CMAKE_C_FLAGS="-O2 -g0 -fPIC"
-
-# Build native addon (sequential build to reduce memory usage)
-RUN npm run build:native -- --jobs 1 --CDCMAKE_POSITION_INDEPENDENT_CODE=ON
-
-# Build TypeScript
+# Build native addon and TypeScript (parallel compilation enabled)
 RUN npm run build
 
 # Install dependencies for mcp-server
