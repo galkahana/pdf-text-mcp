@@ -18,7 +18,7 @@ const path = require('path');
 
 // Test PDFs
 const SIMPLE_PDF = path.join(__dirname, '../test-materials/HighLevelContentContext.pdf');
-const CV_PDF = path.join(__dirname, '../test-materials/GalKahanaCV2022.pdf');
+const CV_PDF = path.join(__dirname, '../test-materials/GalKahanaCV2025.pdf');
 
 // ANSI color codes for output
 const colors = {

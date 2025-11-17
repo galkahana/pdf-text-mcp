@@ -99,45 +99,41 @@ export class PdfTextMcpServer {
         {
           name: 'extract_text',
           description:
-            'Extract text content from a PDF file or base64-encoded content. Bidirectional text (Hebrew, Arabic, etc.) is always supported. Returns the extracted text, page count, and processing metadata. Provide either filePath (for local files) or fileContent (base64-encoded PDF for remote deployment).',
+            'Extract text content from a PDF file or base64-encoded content. Bidirectional text (Hebrew, Arabic, etc.) is always supported. Returns the extracted text, page count, and processing metadata. Provide either filePath (for local files) or fileContent (base64-encoded PDF for remote deployment), but not both.',
           inputSchema: {
             type: 'object',
             properties: {
               filePath: {
                 type: 'string',
-                description: 'Absolute or relative path to the PDF file (for local deployment)',
+                description: 'Absolute or relative path to the PDF file (for local deployment). Provide this OR fileContent, not both.',
               },
               fileContent: {
                 type: 'string',
-                description: 'Base64-encoded PDF content (for remote deployment)',
+                description: 'Base64-encoded PDF content (for remote deployment). Provide this OR filePath, not both.',
               },
             },
-            oneOf: [
-              { required: ['filePath'] },
-              { required: ['fileContent'] },
-            ],
+            // Note: Both params are optional to satisfy Gemini's schema requirements
+            // Runtime validation ensures exactly one is provided
           },
         },
         {
           name: 'extract_metadata',
           description:
-            'Extract metadata from a PDF file or base64-encoded content including title, author, subject, creator, producer, dates, page count, and version. Provide either filePath (for local files) or fileContent (base64-encoded PDF for remote deployment).',
+            'Extract metadata from a PDF file or base64-encoded content including title, author, subject, creator, producer, dates, page count, and version. Provide either filePath (for local files) or fileContent (base64-encoded PDF for remote deployment), but not both.',
           inputSchema: {
             type: 'object',
             properties: {
               filePath: {
                 type: 'string',
-                description: 'Absolute or relative path to the PDF file (for local deployment)',
+                description: 'Absolute or relative path to the PDF file (for local deployment). Provide this OR fileContent, not both.',
               },
               fileContent: {
                 type: 'string',
-                description: 'Base64-encoded PDF content (for remote deployment)',
+                description: 'Base64-encoded PDF content (for remote deployment). Provide this OR filePath, not both.',
               },
             },
-            oneOf: [
-              { required: ['filePath'] },
-              { required: ['fileContent'] },
-            ],
+            // Note: Both params are optional to satisfy Gemini's schema requirements
+            // Runtime validation ensures exactly one is provided
           },
         },
       ],

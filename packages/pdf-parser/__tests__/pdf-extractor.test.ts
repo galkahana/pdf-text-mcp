@@ -23,7 +23,7 @@ describe('PdfExtractor', () => {
 
     cvPdfPath = path.join(
       __dirname,
-      '../test-materials/GalKahanaCV2022.pdf'
+      '../test-materials/GalKahanaCV2025.pdf'
     );
 
     // Create a non-PDF file

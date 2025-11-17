@@ -69,12 +69,12 @@ The PDF summarizer provides three commands:
 Generate an intelligent summary of a PDF file:
 
 ```bash
-uv run pdf-summarizer summarize examples/GalKahanaCV2022.pdf
+uv run pdf-summarizer summarize examples/GalKahanaCV2025.pdf
 ```
 
 Example output:
 ```
-Summarizing PDF: examples/GalKahanaCV2022.pdf
+Summarizing PDF: examples/GalKahanaCV2025.pdf
 Initializing AI agent...
 Analyzing PDF...
 
@@ -110,7 +110,7 @@ uv run pdf-summarizer extract examples/HighLevelContentContext.pdf
 Extract metadata (title, author, dates, etc.) from a PDF:
 
 ```bash
-uv run pdf-summarizer metadata examples/GalKahanaCV2022.pdf
+uv run pdf-summarizer metadata examples/GalKahanaCV2025.pdf
 ```
 
 ### Options
@@ -120,14 +120,14 @@ All commands support the `--mcp-server` option to specify a custom MCP server pa
 ```bash
 uv run pdf-summarizer summarize \
   --mcp-server ../../mcp-server/dist/index.js \
-  examples/GalKahanaCV2022.pdf
+  examples/GalKahanaCV2025.pdf
 ```
 
 ## Example PDFs
 
 The `examples/` directory contains sample PDFs:
 
-- `GalKahanaCV2022.pdf` - Multi-page CV with Unicode metadata (Hebrew)
+- `GalKahanaCV2025.pdf` - Multi-page CV with Unicode metadata (Hebrew)
 - `HighLevelContentContext.pdf` - Simple technical document
 
 ## How It Works
@@ -215,7 +215,7 @@ just clean
 just demo
 
 # Run specific command (summarize, extract, metadata)
-just run summarize examples/GalKahanaCV2022.pdf
+just run summarize examples/GalKahanaCV2025.pdf
 
 # See all available commands
 just --list
@@ -270,7 +270,7 @@ example-agent/
 uv sync
 
 # Run commands
-uv run pdf-summarizer summarize examples/GalKahanaCV2022.pdf
+uv run pdf-summarizer summarize examples/GalKahanaCV2025.pdf
 ```
 
 ### Extending the Agent

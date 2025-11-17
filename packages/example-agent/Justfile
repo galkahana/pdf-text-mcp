@@ -47,7 +47,7 @@ install:
 
 # Run the summarizer on an example PDF
 demo:
-    uv run pdf-summarizer summarize examples/GalKahanaCV2022.pdf
+    uv run pdf-summarizer summarize examples/GalKahanaCV2025.pdf
 
 # Run specific command: summarize, extract, or metadata
 run command pdf:
