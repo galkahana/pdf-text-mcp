@@ -21,9 +21,10 @@ export const FileContentToolSchema = {
 /**
  * Zod schema and type for extract_text and extract_metadata tool parameters
  */
-export const FileContentParamsSchema = z.object({
+export const FileContentParamsSchema = {
   /** Base64-encoded PDF content to extract from */
   fileContent: z.string().describe(fileContentDescription),
-});
+};
 
-export type FileContentParams = z.infer<typeof FileContentParamsSchema>;
+const FileContentParamsSchemaObject = z.object(FileContentParamsSchema);
+export type FileContentParamsType = z.infer<typeof FileContentParamsSchemaObject>;

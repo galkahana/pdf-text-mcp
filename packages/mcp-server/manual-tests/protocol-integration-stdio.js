@@ -92,16 +92,19 @@ function sendRequest(server, request) {
 async function runTests(pdfPath) {
   logSection('PDF Text MCP Server - Protocol Integration Test');
 
-  // Validate PDF path
+  // Use provided PDF or fall back to test material
   if (!pdfPath) {
-    log('\nℹ️  No PDF path provided. Will test protocol without file operations.', 'yellow');
-    log('   Usage: npm run test:manual --workspace=@pdf-text-mcp/mcp-server -- /path/to/test.pdf', 'yellow');
-  } else if (!fs.existsSync(pdfPath)) {
+    pdfPath = path.join(__dirname, '..', '..', '..', 'test-materials', 'GalKahanaCV2025.pdf');
+    log(`\nℹ️  No PDF path provided. Using default test PDF: ${path.basename(pdfPath)}`, 'yellow');
+    log('   Usage: npm run test:manual:stdio --workspace=@pdf-text-mcp/mcp-server -- /path/to/test.pdf', 'yellow');
+  }
+  
+  if (!fs.existsSync(pdfPath)) {
     log(`\n❌ Error: PDF file not found: ${pdfPath}`, 'yellow');
     process.exit(1);
-  } else {
-    log(`\n✓ Testing with PDF: ${pdfPath}`, 'green');
   }
+  
+  log(`\n✓ Testing with PDF: ${pdfPath}`, 'green');
 
   // Start the MCP server
   logSection('1. Starting MCP Server');
@@ -178,61 +181,59 @@ async function runTests(pdfPath) {
       });
     }
 
-    // Test 3: Extract Text (if PDF provided)
-    if (pdfPath) {
-      logSection('4. Extract Text from PDF');
-      const extractResponse = await sendRequest(server, {
-        jsonrpc: '2.0',
-        id: 4,
-        method: 'tools/call',
-        params: {
-          name: 'extract_text',
-          arguments: {
-            filePath: pdfPath,
-            enableBidi: true,
-          },
+    // Test 3: Extract Text
+    logSection('4. Extract Text from PDF');
+    const extractResponse = await sendRequest(server, {
+      jsonrpc: '2.0',
+      id: 4,
+      method: 'tools/call',
+      params: {
+        name: 'extract_text',
+        arguments: {
+          filePath: pdfPath,
+          enableBidi: true,
         },
-      });
+      },
+    });
 
-      if (extractResponse.result) {
-        log('\n✓ Text extraction successful', 'green');
-        const result = JSON.parse(extractResponse.result.content[0].text);
-        log(`  Pages: ${result.pageCount}`, 'blue');
-        log(`  File size: ${Math.round(result.fileSize / 1024)} KB`, 'blue');
-        log(
-          `  Processing time: ${result.processingTime} ms`,
-          'blue'
-        );
-        log(`  Text preview (first 200 chars):`, 'blue');
-        log(
-          `  "${result.text.substring(0, 200)}..."`,
-          'cyan'
-        );
-      }
+    if (extractResponse.result) {
+      log('\n✓ Text extraction successful', 'green');
+      const result = JSON.parse(extractResponse.result.content[0].text);
+      log(`  Pages: ${result.pageCount}`, 'blue');
+      log(`  File size: ${Math.round(result.fileSize / 1024)} KB`, 'blue');
+      log(
+        `  Processing time: ${result.processingTime} ms`,
+        'blue'
+      );
+      log(`  Text preview (first 200 chars):`, 'blue');
+      log(
+        `  "${result.text.substring(0, 200)}..."`,
+        'cyan'
+      );
+    }
 
-      // Test 4: Extract Metadata
-      logSection('5. Extract PDF Metadata');
-      const metadataResponse = await sendRequest(server, {
-        jsonrpc: '2.0',
-        id: 5,
-        method: 'tools/call',
-        params: {
-          name: 'extract_metadata',
-          arguments: {
-            filePath: pdfPath,
-          },
+    // Test 4: Extract Metadata
+    logSection('5. Extract PDF Metadata');
+    const metadataResponse = await sendRequest(server, {
+      jsonrpc: '2.0',
+      id: 5,
+      method: 'tools/call',
+      params: {
+        name: 'extract_metadata',
+        arguments: {
+          filePath: pdfPath,
         },
-      });
+      },
+    });
 
-      if (metadataResponse.result) {
-        log('\n✓ Metadata extraction successful', 'green');
-        const metadata = JSON.parse(metadataResponse.result.content[0].text);
-        Object.entries(metadata).forEach(([key, value]) => {
-          if (value) {
-            log(`  ${key}: ${value}`, 'blue');
-          }
-        });
-      }
+    if (metadataResponse.result) {
+      log('\n✓ Metadata extraction successful', 'green');
+      const metadata = JSON.parse(metadataResponse.result.content[0].text);
+      Object.entries(metadata).forEach(([key, value]) => {
+        if (value) {
+          log(`  ${key}: ${value}`, 'blue');
+        }
+      });
     }
 
     // Test 5: Error Handling

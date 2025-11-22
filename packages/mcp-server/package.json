@@ -14,7 +14,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:manual": "node manual-tests/protocol-integration.js",
+    "test:manual": "npm run test:manual:stdio && npm run test:manual:http",
+    "test:manual:stdio": "node manual-tests/protocol-integration-stdio.js",
+    "test:manual:http": "node manual-tests/protocol-integration-http.js",
     "test:all": "npm test && npm run test:manual",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write src/**/*.ts"

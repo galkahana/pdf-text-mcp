@@ -18,12 +18,12 @@ describe('PdfExtractor', () => {
     // Use real PDFs from test materials
     realPdfPath = path.join(
       __dirname,
-      '../test-materials/HighLevelContentContext.pdf'
+      '../../../test-materials/HighLevelContentContext.pdf'
     );
 
     cvPdfPath = path.join(
       __dirname,
-      '../test-materials/GalKahanaCV2025.pdf'
+      '../../../test-materials/GalKahanaCV2025.pdf'
     );
 
     // Create a non-PDF file

@@ -1,59 +1,33 @@
 /**
  * MCP Server Implementation for PDF Text Extraction over WebSocket.
  */
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer, ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  ErrorCode,
-  McpError,
-} from '@modelcontextprotocol/sdk/types.js';
+import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { PdfExtractor } from '@pdf-text-mcp/pdf-parser';
 import { ServerConfig } from '../types';
-import { FileContentParamsSchema, FileContentToolSchema } from '../schemas/http';
-import { PDFTextMcpServer, ToolDefinition } from './pdf-text-mcp-server';
+import { FileContentParamsSchema, FileContentParamsType } from '../schemas/http';
+import { PDFTextMcpServer } from './pdf-text-mcp-server';
 
 import express from 'express';
 import { createServer } from 'http';
-import { randomUUID } from 'crypto';
 
 export class PdfTextMcpServerHttp implements PDFTextMcpServer {
-  private server: Server;
+  private server: McpServer;
   private extractor: PdfExtractor;
   private config: ServerConfig;
+
   private requestCount: number = 0;
   private errorCount: number = 0;
-
   private httpServer?: any;
-  private transport?: StreamableHTTPServerTransport;
   private ready: boolean = false;
-
-  private tools: Record<string, ToolDefinition> = {
-    extract_text: {
-      description:
-        'Extract text content from a PDF base64-encoded content. Bidirectional text (Hebrew, Arabic, etc.) is always supported. Returns the extracted text, page count, and processing metadata. Provide fileContent (base64-encoded PDF)',
-      inputSchema: FileContentToolSchema,
-      implementation: this.createFileContentOperationHandler(fileContent =>
-        this.extractor.extractTextFromBuffer(fileContent)
-      ),
-    },
-    extract_metadata: {
-      description:
-        'Extract metadata from a PDF base64-encoded content including title, author, subject, creator, producer, dates, page count, and version. Provide fileContent (base64-encoded PDF)',
-      inputSchema: FileContentToolSchema,
-      implementation: this.createFileContentOperationHandler(fileContent =>
-        this.extractor.getMetadataFromBuffer(fileContent)
-      ),
-    },
-  };
 
   constructor(config: ServerConfig) {
     this.config = config;
 
     // Create the MCP Server instance
     // The Server class handles all the protocol details (JSON-RPC, initialization, etc.)
-    this.server = new Server(
+    this.server = new McpServer(
       {
         name: config.name,
         version: config.version,
@@ -73,40 +47,66 @@ export class PdfTextMcpServerHttp implements PDFTextMcpServer {
       timeout: config.timeout,
     });
 
-    this.setupHandlers();
+    this.setupTools();
   }
 
-  /**
-   * Set up request handlers for the MCP protocol
-   */
-  private setupHandlers(): void {
-    // Handler: tools/list
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: Object.entries(this.tools).map(([name, tool]) => ({
-        name,
-        description: tool.description,
-        inputSchema: tool.inputSchema,
-      })),
-    }));
 
-    // Handler: tools/call
-    this.server.setRequestHandler(CallToolRequestSchema, async request => {
-      const { name, arguments: args } = request.params;
+  private setupTools(): void {
+    this.server.registerTool(
+      'extract_text',
+      {
+        description: 'Extract text content from a PDF base64-encoded content. Bidirectional text (Hebrew, Arabic, etc.) is always supported. Returns the extracted text, page count, and processing metadata. Provide fileContent (base64-encoded PDF)',
+        inputSchema: FileContentParamsSchema,
+      },
+      this.createFileContentOperationHandler((fileContent: Buffer) =>
+        this.extractor.extractTextFromBuffer(fileContent)
+      )
+    )
 
-      this.requestCount++;
+    this.server.registerTool(
+      'extract_metadata',
+      {
+        description: 'Extract metadata from a PDF base64-encoded content including title, author, subject, creator, producer, dates, page count, and version. Provide fileContent (base64-encoded PDF)',
+        inputSchema: FileContentParamsSchema,
+      },
+      this.createFileContentOperationHandler((fileContent: Buffer) =>
+        this.extractor.getMetadataFromBuffer(fileContent)
+      ),
+    );
+  }
 
+  private createFileContentOperationHandler<T>(
+      operation: (fileContent: Buffer) => Promise<T>
+    ): ToolCallback<typeof FileContentParamsSchema> {
+    return async (args: FileContentParamsType) => {
       try {
-        const tool = this.tools[name];
+        // Validate parameters
+        const { fileContent } = args;
 
-        if (!tool) {
-          this.errorCount++;
-          throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+        // Decode base64 content to buffer
+        const buffer = Buffer.from(fileContent, 'base64');
+
+        // Check file size
+        if (this.config.maxFileSize && buffer.length > this.config.maxFileSize) {
+          throw new McpError(
+            ErrorCode.InvalidRequest,
+            `File size (${buffer.length} bytes) exceeds maximum (${this.config.maxFileSize} bytes)`
+          );
         }
 
-        return await tool.implementation(args);
-      } catch (error) {
-        this.errorCount++;
+        // Execute the operation
+        const result = await operation(buffer);
 
+        // Return result in MCP format
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
         if (error instanceof McpError) {
           throw error;
         }
@@ -115,41 +115,6 @@ export class PdfTextMcpServerHttp implements PDFTextMcpServer {
           `Tool execution failed: ${error instanceof Error ? error.message : String(error)}`
         );
       }
-    });
-  }
-
-  private createFileContentOperationHandler<T>(operation: (fileContent: Buffer) => Promise<T>): (
-    args: unknown
-  ) => Promise<{
-    content: Array<{ type: string; text: string }>;
-  }> {
-    return async (args: unknown) => {
-      // Validate parameters
-      const { fileContent } = FileContentParamsSchema.parse(args);
-
-      // Decode base64 content to buffer
-      const buffer = Buffer.from(fileContent, 'base64');
-
-      // Check file size
-      if (this.config.maxFileSize && buffer.length > this.config.maxFileSize) {
-        throw new McpError(
-          ErrorCode.InvalidRequest,
-          `File size (${buffer.length} bytes) exceeds maximum (${this.config.maxFileSize} bytes)`
-        );
-      }
-
-      // Execute the operation
-      const result = await operation(buffer);
-
-      // Return result in MCP format
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
-      };
     };
   }
 
@@ -160,7 +125,8 @@ export class PdfTextMcpServerHttp implements PDFTextMcpServer {
   async start(): Promise<void> {
     // Create Express app for health/metrics endpoints
     const app = express();
-    app.use(express.json());
+    // Increase body size limit for base64-encoded PDFs (default is 100kb)
+    app.use(express.json({ limit: '50mb' }));
 
     // Health check endpoint (liveness probe)
     app.get('/health', (_req, res) => {
@@ -187,13 +153,6 @@ export class PdfTextMcpServerHttp implements PDFTextMcpServer {
       });
     });
 
-    // Create MCP transport with session management
-    this.transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
-    });
-
-    // Connect server to transport
-    await this.server.connect(this.transport);
 
     // API key authentication middleware
     const authMiddleware = (req: any, res: any, next: any) => {
@@ -209,9 +168,40 @@ export class PdfTextMcpServerHttp implements PDFTextMcpServer {
       next();
     };
 
+    // Request tracking middleware for MCP endpoint
+    const mcpTrackingMiddleware = async (_req: any, res: any, next: any) => {
+      this.requestCount++;
+      
+      try {
+        await next();
+        
+        // Track errors based on HTTP status code
+        if (res.statusCode >= 400) {
+          this.errorCount++;
+        }
+      } catch (error) {
+        this.errorCount++;
+        throw error;
+      }
+    };
+
     // MCP endpoint - handles all MCP protocol messages
-    app.all('/mcp', authMiddleware, async (req, res) => {
-      await this.transport!.handleRequest(req, res, req.body);
+    app.all('/mcp', mcpTrackingMiddleware, authMiddleware, async (req, res) => {
+      // In stateless mode, create a new transport for each request to prevent
+      // request ID collisions. Different clients may use the same JSON-RPC request
+      // IDs, which would cause responses to be routed to the wrong HTTP connections
+      // if the transport state is shared.
+      const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined,
+          enableJsonResponse: true
+      });
+
+      res.on('close', () => {
+          transport.close();
+      });
+
+      await this.server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
     });
 
     // Create HTTP server
@@ -252,12 +242,6 @@ export class PdfTextMcpServerHttp implements PDFTextMcpServer {
     // Close MCP server
     await this.server.close();
     console.error('PDF Text Extraction MCP Server stopped.');
-
-    // Close transport if running
-    if (this.transport) {
-      await this.transport.close();
-      console.error('MCP transport closed');
-    }
 
     // Close HTTP server if running
     if (this.httpServer) {

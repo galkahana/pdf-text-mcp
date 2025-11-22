@@ -2,52 +2,32 @@
  * MCP Server Implementation for PDF Text Extraction over STDIO.
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer, ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
   ErrorCode,
   McpError,
+  ServerRequest,
+  ServerNotification,
 } from '@modelcontextprotocol/sdk/types.js';
+import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import { PdfExtractor } from '@pdf-text-mcp/pdf-parser';
 import { ServerConfig } from '../types';
-import { FilePathParamsSchema, FilePathToolSchema } from '../schemas/stdio';
-import { PDFTextMcpServer, ToolDefinition } from './pdf-text-mcp-server';
+import { FilePathParamsSchema, FilePathParamsType } from '../schemas/stdio';
+import { PDFTextMcpServer } from './pdf-text-mcp-server';
 import * as fs from 'fs/promises';
 
 export class PdfTextMcpServerStdio implements PDFTextMcpServer {
-  private server: Server;
+  private server: McpServer;
   private extractor: PdfExtractor;
   private config: ServerConfig;
-  private requestCount: number = 0;
-  private errorCount: number = 0;
-
-  private tools: Record<string, ToolDefinition> = {
-    extract_text: {
-      description:
-        'Extract text content from a PDF file. Bidirectional text (Hebrew, Arabic, etc.) is always supported. Returns the extracted text, page count, and processing metadata. Provide filePath.',
-      inputSchema: FilePathToolSchema,
-      implementation: this.createFilePathOperationHandler(filePath =>
-        this.extractor.extractText(filePath)
-      ),
-    },
-    extract_metadata: {
-      description:
-        'Extract metadata from a PDF file including title, author, subject, creator, producer, dates, page count, and version. Provide filePath.',
-      inputSchema: FilePathToolSchema,
-      implementation: this.createFilePathOperationHandler(filePath =>
-        this.extractor.getMetadata(filePath)
-      ),
-    },
-  };
 
   constructor(config: ServerConfig) {
     this.config = config;
 
     // Create the MCP Server instance
     // The Server class handles all the protocol details (JSON-RPC, initialization, etc.)
-    this.server = new Server(
+    this.server = new McpServer(
       {
         name: config.name,
         version: config.version,
@@ -67,40 +47,61 @@ export class PdfTextMcpServerStdio implements PDFTextMcpServer {
       timeout: config.timeout,
     });
 
-    this.setupHandlers();
+    this.setupTools();
   }
 
-  /**
-   * Set up request handlers for the MCP protocol
-   */
-  private setupHandlers(): void {
-    // Handler: tools/list
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: Object.entries(this.tools).map(([name, tool]) => ({
-        name,
-        description: tool.description,
-        inputSchema: tool.inputSchema,
-      })),
-    }));
+  private setupTools(): void {
+    this.server.registerTool(
+      'extract_text',
+      {
+        description: 'Extract text content from a PDF file. Bidirectional text (Hebrew, Arabic, etc.) is always supported. Returns the extracted text, page count, and processing metadata. Provide filePath.',
+        inputSchema: FilePathParamsSchema,
+      },
+      this.createFilePathOperationHandler((filePath: string) =>
+        this.extractor.extractText(filePath)
+      )
+    )
 
-    // Handler: tools/call
-    this.server.setRequestHandler(CallToolRequestSchema, async request => {
-      const { name, arguments: args } = request.params;
+    this.server.registerTool(
+      'extract_metadata',
+      {
+        description: 'Extract metadata from a PDF file including title, author, subject, creator, producer, dates, page count, and version. Provide filePath.',
+        inputSchema: FilePathParamsSchema,
+      },
+      this.createFilePathOperationHandler((filePath: string) =>
+        this.extractor.getMetadata(filePath)
+      )
+    );
+  }
 
-      this.requestCount++;
-
+  private createFilePathOperationHandler<T>(
+    operation: (filePath: string) => Promise<T>
+  ): ToolCallback<typeof FilePathParamsSchema> {
+    return async (args: FilePathParamsType, _extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
       try {
-        const tool = this.tools[name];
+        // Validate parameters
+        const { filePath } = args;
 
-        if (!tool) {
-          this.errorCount++;
-          throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+        // Check if file exists
+        try {
+          await fs.access(filePath);
+        } catch {
+          throw new McpError(ErrorCode.InvalidRequest, `File not found: ${filePath}`);
         }
 
-        return await tool.implementation(args);
-      } catch (error) {
-        this.errorCount++;
+        // Execute the operation
+        const result = await operation(filePath);
 
+        // Return result in MCP format
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
         if (error instanceof McpError) {
           throw error;
         }
@@ -109,37 +110,6 @@ export class PdfTextMcpServerStdio implements PDFTextMcpServer {
           `Tool execution failed: ${error instanceof Error ? error.message : String(error)}`
         );
       }
-    });
-  }
-
-  private createFilePathOperationHandler<T>(operation: (filePath: string) => Promise<T>): (
-    args: unknown
-  ) => Promise<{
-    content: Array<{ type: string; text: string }>;
-  }> {
-    return async (args: unknown) => {
-      // Validate parameters
-      const { filePath } = FilePathParamsSchema.parse(args);
-
-      // Check if file exists
-      try {
-        await fs.access(filePath);
-      } catch {
-        throw new McpError(ErrorCode.InvalidRequest, `File not found: ${filePath}`);
-      }
-
-      // Execute the operation
-      const result = await operation(filePath);
-
-      // Return result in MCP format
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
-      };
     };
   }
 

@@ -21,9 +21,11 @@ export const FilePathToolSchema = {
 /**
  * Zod schema and type for extract_text and extract_metadata tool parameters
  */
-export const FilePathParamsSchema = z.object({
-  /** Path to the PDF file to extract from */
-  filePath: z.string().describe(filePathDescription),
-});
 
-export type FilePathParams = z.infer<typeof FilePathParamsSchema>;
+export const FilePathParamsSchema = {
+  /** Path to the PDF file to extract from */
+  filePath: z.string().describe(filePathDescription)
+}
+
+const FilePathParamsSchemaObject = z.object(FilePathParamsSchema);
+export type FilePathParamsType = z.infer<typeof FilePathParamsSchemaObject>;

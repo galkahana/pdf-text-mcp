@@ -11,12 +11,3 @@ export interface PDFTextMcpServer {
   start(): Promise<void>;
   stop(): Promise<void>;
 }
-
-// common tool definition structure
-export type ToolDefinition = {
-  description: string;
-  inputSchema: unknown;
-  implementation: (args: unknown) => Promise<{
-    content: Array<{ type: string; text: string }>;
-  }>;
-};

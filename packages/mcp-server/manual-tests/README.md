@@ -14,29 +14,60 @@ These tests complement the unit tests by testing the actual protocol communicati
 
 ## Tests
 
-### protocol-integration.js
+### protocol-integration-stdio.js
 
-**Purpose**: End-to-end test of the MCP protocol implementation
+**Purpose**: End-to-end test of the MCP protocol implementation over STDIO transport
 
 **What it tests**:
-1. Server startup and initialization
+1. Server startup and initialization (STDIO mode)
 2. Protocol handshake (initialize request/response)
 3. Tool discovery (tools/list)
-4. Text extraction from real PDF files
+4. Text extraction from real PDF files (file path based)
 5. Metadata extraction from real PDF files
 6. Error handling with invalid file paths
 
 **Usage**:
 ```bash
-# Test without a PDF (basic protocol test only)
+# Run both STDIO and HTTP tests
 npm run test:manual --workspace=@pdf-text-mcp/mcp-server
 
-# Test with a specific PDF file
-npm run test:manual --workspace=@pdf-text-mcp/mcp-server -- /path/to/document.pdf
+# Test STDIO only without a PDF (basic protocol test only)
+npm run test:manual:stdio --workspace=@pdf-text-mcp/mcp-server
+
+# Test STDIO with a specific PDF file
+npm run test:manual:stdio --workspace=@pdf-text-mcp/mcp-server -- /path/to/document.pdf
 
 # From the package directory
-node manual-tests/protocol-integration.js /path/to/test.pdf
+node manual-tests/protocol-integration-stdio.js /path/to/test.pdf
 ```
+
+### protocol-integration-http.js
+
+**Purpose**: End-to-end test of the MCP protocol implementation over HTTP transport
+
+**What it tests**:
+1. Server startup in HTTP mode
+2. Health check endpoint
+3. Protocol handshake via HTTP POST
+4. Tool discovery (tools/list)
+5. Text extraction from PDF content (base64 encoded)
+6. Metadata extraction from PDF content
+7. Error handling with invalid content
+8. Metrics endpoint
+
+**Usage**:
+```bash
+# Test HTTP only without a PDF (basic protocol test only)
+npm run test:manual:http --workspace=@pdf-text-mcp/mcp-server
+
+# Test HTTP with a specific PDF file
+npm run test:manual:http --workspace=@pdf-text-mcp/mcp-server -- /path/to/document.pdf
+
+# From the package directory
+node manual-tests/protocol-integration-http.js /path/to/test.pdf
+```
+
+**Note**: The HTTP test will start the server on port 3000 and expects it to be available during testing.
 
 **What you'll see**:
 - Colored output showing request/response flow
