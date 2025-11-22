@@ -20,7 +20,8 @@
  *   ENABLE_BIDI    - Enable bidirectional text support (default: true)
  */
 
-import { PdfTextMcpServer } from './server';
+import { buildFromConfig as buildFromConfigHTTP } from './servers/pdf-text-mcp-server-http';
+import { buildFromConfig as buildFromConfigStdio } from './servers/pdf-text-mcp-server-stdio';
 import { loadConfig } from './config';
 
 /**
@@ -32,7 +33,7 @@ async function main() {
     const config = loadConfig();
 
     // Create and start the server
-    const server = new PdfTextMcpServer(config);
+    const server = config.transportMode === 'http' ? buildFromConfigHTTP(config) : buildFromConfigStdio(config);
     await server.start();
 
     // Handle graceful shutdown
