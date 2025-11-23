@@ -168,7 +168,8 @@ class MCPHTTPClient:
         # Call MCP tool directly (bypasses LLM - no tokens)
         result = await self._call_tool("extract_metadata", base64_content)
 
-        return result.get("metadata", {})
+        # Result is already the metadata dictionary
+        return result
 
     async def health_check(self) -> bool:
         """Check if server is healthy.
