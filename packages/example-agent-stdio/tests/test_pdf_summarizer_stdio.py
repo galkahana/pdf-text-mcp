@@ -7,7 +7,7 @@ import pytest
 from pydantic_ai.messages import ModelResponse, TextPart, UserPromptPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from pdf_summarizer.pdf_summarizer import PDFSummarizer
+from pdf_summarizer_stdio.pdf_summarizer import PDFSummarizerStdio
 
 # Set fake API key for testing to avoid initialization errors
 os.environ["GEMINI_API_KEY"] = "test_api_key_for_unit_tests"
@@ -29,12 +29,12 @@ def mock_mcp_server_path(tmp_path):
     return server_path
 
 
-class TestPDFSummarizer:
-    """Test cases for PDFSummarizer class."""
+class TestPDFSummarizerStdio:
+    """Test cases for PDFSummarizerStdio class."""
 
     def test_init_with_valid_path(self, mock_mcp_server_path):
         """Test initialization with valid MCP server path."""
-        summarizer = PDFSummarizer(mcp_server_path=mock_mcp_server_path)
+        summarizer = PDFSummarizerStdio(mcp_server_path=mock_mcp_server_path)
         assert summarizer.agent is not None
         assert summarizer.mcp_server is not None
 
@@ -42,25 +42,25 @@ class TestPDFSummarizer:
         """Test initialization with invalid MCP server path fails gracefully."""
         nonexistent_path = Path("/nonexistent/path/to/index.js")
         with pytest.raises(FileNotFoundError, match="MCP server not found"):
-            PDFSummarizer(mcp_server_path=nonexistent_path)
+            PDFSummarizerStdio(mcp_server_path=nonexistent_path)
 
     def test_validate_and_resolve_path_success(self, mock_mcp_server_path, temp_pdf):
         """Test path validation with existing file."""
-        summarizer = PDFSummarizer(mcp_server_path=mock_mcp_server_path)
+        summarizer = PDFSummarizerStdio(mcp_server_path=mock_mcp_server_path)
         abs_path = summarizer._validate_and_resolve_path(temp_pdf)
         assert Path(abs_path).is_absolute()
         assert Path(abs_path).exists()
 
     def test_validate_and_resolve_path_not_found(self, mock_mcp_server_path):
         """Test path validation with non-existent file."""
-        summarizer = PDFSummarizer(mcp_server_path=mock_mcp_server_path)
+        summarizer = PDFSummarizerStdio(mcp_server_path=mock_mcp_server_path)
         with pytest.raises(FileNotFoundError, match="PDF file not found"):
             summarizer._validate_and_resolve_path("/nonexistent/file.pdf")
 
     @pytest.mark.asyncio
     async def test_summarize_pdf(self, mock_mcp_server_path, temp_pdf):
         """Test PDF summarization with FunctionModel."""
-        summarizer = PDFSummarizer(mcp_server_path=mock_mcp_server_path)
+        summarizer = PDFSummarizerStdio(mcp_server_path=mock_mcp_server_path)
 
         # Track the prompt sent to the model
         captured_prompt = None
@@ -96,7 +96,7 @@ class TestPDFSummarizer:
     @pytest.mark.asyncio
     async def test_extract_text(self, mock_mcp_server_path, temp_pdf):
         """Test text extraction with FunctionModel."""
-        summarizer = PDFSummarizer(mcp_server_path=mock_mcp_server_path)
+        summarizer = PDFSummarizerStdio(mcp_server_path=mock_mcp_server_path)
 
         # Track the prompt sent to the model
         captured_prompt = None
@@ -131,7 +131,7 @@ class TestPDFSummarizer:
     @pytest.mark.asyncio
     async def test_get_metadata(self, mock_mcp_server_path, temp_pdf):
         """Test metadata extraction with FunctionModel."""
-        summarizer = PDFSummarizer(mcp_server_path=mock_mcp_server_path)
+        summarizer = PDFSummarizerStdio(mcp_server_path=mock_mcp_server_path)
 
         # Track the prompt sent to the model
         captured_prompt = None
@@ -166,7 +166,7 @@ class TestPDFSummarizer:
     @pytest.mark.asyncio
     async def test_summarize_pdf_file_not_found(self, mock_mcp_server_path):
         """Test summarization with non-existent PDF."""
-        summarizer = PDFSummarizer(mcp_server_path=mock_mcp_server_path)
+        summarizer = PDFSummarizerStdio(mcp_server_path=mock_mcp_server_path)
 
         with pytest.raises(FileNotFoundError):
             await summarizer.summarize_pdf("/nonexistent/file.pdf")
@@ -178,7 +178,7 @@ class TestPDFSummarizer:
         monkeypatch.setenv("MAX_FILE_SIZE", "50000000")
         monkeypatch.setenv("TIMEOUT", "15000")
 
-        summarizer = PDFSummarizer(mcp_server_path=mock_mcp_server_path)
+        summarizer = PDFSummarizerStdio(mcp_server_path=mock_mcp_server_path)
 
         # Verify env was copied (check that the MCPServerStdio has env set)
         assert summarizer.mcp_server is not None
@@ -187,7 +187,7 @@ class TestPDFSummarizer:
 
     def test_path_resolution_handles_relative_paths(self, mock_mcp_server_path, temp_pdf):
         """Test that relative paths are converted to absolute."""
-        summarizer = PDFSummarizer(mcp_server_path=mock_mcp_server_path)
+        summarizer = PDFSummarizerStdio(mcp_server_path=mock_mcp_server_path)
 
         # Get just the filename
         relative_path = Path(temp_pdf).name

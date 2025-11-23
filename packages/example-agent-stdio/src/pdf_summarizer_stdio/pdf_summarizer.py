@@ -33,10 +33,7 @@ class PDFSummarizerStdio:
             # Default: ../../mcp-server/dist/index.js relative to this file
             current_file = Path(__file__)
             mcp_server_path = (
-                current_file.parent.parent.parent.parent
-                / "mcp-server"
-                / "dist"
-                / "index.js"
+                current_file.parent.parent.parent.parent / "mcp-server" / "dist" / "index.js"
             )
 
         if not mcp_server_path.exists():
@@ -108,9 +105,7 @@ class PDFSummarizerStdio:
             A summary of the PDF content
         """
         abs_path = self._validate_and_resolve_path(pdf_path)
-        return await self._run_agent_with_prompt(
-            f"Please summarize the PDF file at: {abs_path}"
-        )
+        return await self._run_agent_with_prompt(f"Please summarize the PDF file at: {abs_path}")
 
     async def extract_text(self, pdf_path: str) -> str:
         """Extract text from a PDF file.

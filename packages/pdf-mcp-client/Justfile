@@ -1,8 +1,4 @@
-# Example Agent Package - Build and Test Commands
-
-# Build package (Python packages don't need build step, but this is for consistency)
-build:
-    @echo "Python package - no build step needed"
+# PDF MCP Client Package - Build and Test Commands
 
 # Run tests
 test:
@@ -47,15 +43,11 @@ clean:
 
 # Install dependencies
 install:
-    uv sync
+    uv sync --all-extras
 
-# Run the summarizer on an example PDF
-demo:
-    uv run pdf-summarizer-stdio summarize ../../test-materials/GalKahanaCV2025.pdf
-
-# Run specific command: summarize, extract, or metadata
-run command pdf:
-    uv run pdf-summarizer-stdio {{command}} {{pdf}}
+# Build package (Python packages don't need build step, but this is for consistency)
+build:
+    @echo "Python package - no build step needed"
 
 # Show available Python environment info
 info:

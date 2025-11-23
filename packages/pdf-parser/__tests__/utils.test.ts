@@ -54,9 +54,7 @@ describe('Utils', () => {
 
     it('should throw error for non-existent file', async () => {
       const nonExistentFile = path.join(tempDir, 'does-not-exist.pdf');
-      await expect(validateFile(nonExistentFile, 1024 * 1024)).rejects.toThrow(
-        PdfExtractionError
-      );
+      await expect(validateFile(nonExistentFile, 1024 * 1024)).rejects.toThrow(PdfExtractionError);
       await expect(validateFile(nonExistentFile, 1024 * 1024)).rejects.toMatchObject({
         code: PdfErrorCode.INVALID_FILE,
       });
@@ -129,7 +127,7 @@ describe('Utils', () => {
     });
 
     it('should reject when promise times out', async () => {
-      const promise = new Promise(resolve => setTimeout(() => resolve('late'), 200));
+      const promise = new Promise((resolve) => setTimeout(() => resolve('late'), 200));
       await expect(withTimeout(promise, 50)).rejects.toThrow(PdfExtractionError);
       await expect(withTimeout(promise, 50)).rejects.toMatchObject({
         code: PdfErrorCode.TIMEOUT,

@@ -347,6 +347,48 @@ uv run pdf-analyzer-http summarize ../../../test-materials/GalKahanaCV2025.pdf \
 pytest tests/
 ```
 
+## Development
+
+The project uses [just](https://github.com/casey/just) for common development tasks:
+
+```bash
+# Install dependencies
+just install
+
+# Run tests
+just test
+
+# Run tests with verbose output
+just test-verbose
+
+# Run tests with coverage
+just test-coverage
+
+# Lint check
+just lint
+
+# Auto-fix linting issues
+just lint-fix
+
+# Format code
+just format
+
+# Check formatting without modifying
+just format-check
+
+# Type check with mypy
+just type-check
+
+# Run all checks (lint + format-check + type-check + test)
+just check
+
+# Clean build artifacts
+just clean
+
+# See all available commands
+just --list
+```
+
 ## Environment Variables
 
 | Variable | Description | Required |

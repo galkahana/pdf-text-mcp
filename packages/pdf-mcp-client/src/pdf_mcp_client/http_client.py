@@ -47,7 +47,7 @@ class MCPHTTPClient:
 
         headers = {
             "Content-Type": "application/json",
-            "Accept": "application/json, text/event-stream"
+            "Accept": "application/json, text/event-stream",
         }
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
@@ -97,9 +97,7 @@ class MCPHTTPClient:
         # Check for JSON-RPC error
         if "error" in rpc_response:
             error = rpc_response["error"]
-            raise ValueError(
-                f"MCP error [{error.get('code')}]: {error.get('message')}"
-            )
+            raise ValueError(f"MCP error [{error.get('code')}]: {error.get('message')}")
 
         # Extract result
         result = rpc_response.get("result", {})
@@ -183,14 +181,14 @@ class MCPHTTPClient:
         except httpx.HTTPError:
             return False
 
-    async def close(self):
+    async def close(self) -> None:
         """Close HTTP client."""
         await self.client.aclose()
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "MCPHTTPClient":
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         await self.close()

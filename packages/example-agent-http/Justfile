@@ -1,8 +1,4 @@
-# Example Agent Package - Build and Test Commands
-
-# Build package (Python packages don't need build step, but this is for consistency)
-build:
-    @echo "Python package - no build step needed"
+# Example Agent HTTP Package - Build and Test Commands
 
 # Run tests
 test:
@@ -49,13 +45,17 @@ clean:
 install:
     uv sync
 
-# Run the summarizer on an example PDF
-demo:
-    uv run pdf-summarizer-stdio summarize ../../test-materials/GalKahanaCV2025.pdf
+# Build package (Python packages don't need build step, but this is for consistency)
+build:
+    @echo "Python package - no build step needed"
 
-# Run specific command: summarize, extract, or metadata
-run command pdf:
-    uv run pdf-summarizer-stdio {{command}} {{pdf}}
+# Run the analyzer on an example PDF
+demo:
+    uv run pdf-analyzer-http analyze ../../test-materials/GalKahanaCV2025.pdf --mcp-url http://localhost:3000
+
+# Run specific command: analyze, extract, or metadata
+run command pdf *args:
+    uv run pdf-analyzer-http {{command}} {{pdf}} {{args}}
 
 # Show available Python environment info
 info:

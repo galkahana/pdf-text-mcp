@@ -16,15 +16,9 @@ describe('PdfExtractor', () => {
     invalidFilePath = path.join(tempDir, 'invalid.txt');
 
     // Use real PDFs from test materials
-    realPdfPath = path.join(
-      __dirname,
-      '../../../test-materials/HighLevelContentContext.pdf'
-    );
+    realPdfPath = path.join(__dirname, '../../../test-materials/HighLevelContentContext.pdf');
 
-    cvPdfPath = path.join(
-      __dirname,
-      '../../../test-materials/GalKahanaCV2025.pdf'
-    );
+    cvPdfPath = path.join(__dirname, '../../../test-materials/GalKahanaCV2025.pdf');
 
     // Create a non-PDF file
     await fs.writeFile(invalidFilePath, 'This is not a PDF file');

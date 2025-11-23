@@ -24,6 +24,58 @@ uv pip install -e packages/pdf-mcp-client
 pip install -e packages/pdf-mcp-client
 ```
 
+## Building and Testing
+
+### Using Just (Recommended)
+
+```bash
+# Install dependencies
+just install
+
+# Run tests
+just test
+
+# Lint check
+just lint
+
+# Format code
+just format
+
+# Check formatting without modifying
+just format-check
+
+# Type check with mypy
+just type-check
+
+# Run all checks (lint + format-check + type-check + test)
+just check
+
+# Clean build artifacts
+just clean
+
+# See all available commands
+just --list
+```
+
+### Using uv
+
+```bash
+# Install dependencies
+uv sync --all-extras
+
+# Run tests
+uv run pytest tests
+
+# Lint
+uv run ruff check src tests
+
+# Format
+uv run black src tests
+
+# Type check
+uv run mypy src
+```
+
 ## Usage
 
 ### Direct HTTP Client (Zero Tokens)

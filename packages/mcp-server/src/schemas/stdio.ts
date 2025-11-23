@@ -24,8 +24,8 @@ export const FilePathToolSchema = {
 
 export const FilePathParamsSchema = {
   /** Path to the PDF file to extract from */
-  filePath: z.string().describe(filePathDescription)
-}
+  filePath: z.string().describe(filePathDescription),
+};
 
 const FilePathParamsSchemaObject = z.object(FilePathParamsSchema);
 export type FilePathParamsType = z.infer<typeof FilePathParamsSchemaObject>;

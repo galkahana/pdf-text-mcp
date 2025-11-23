@@ -14,26 +14,46 @@ rebuild:
 
 # Run tests
 test:
-    jest
+    npm test
 
 # Run tests in watch mode
 test-watch:
-    jest --watch
+    npm run test:watch
 
 # Run tests with coverage
 test-coverage:
-    jest --coverage
+    npm run test:coverage
 
 # Run manual integration tests
 test-manual:
-    node manual-tests/integration-test.js
+    npm run test:manual
 
 # Run all tests (unit + manual)
-test-all: test test-manual
+test-all:
+    npm run test:all
 
 # Clean build artifacts
 clean:
-    rimraf dist build
+    npm run clean
+
+# Lint check
+lint:
+    npm run lint
+
+# Auto-fix linting issues
+lint-fix:
+    npm run lint -- --fix
+
+# Format code
+format:
+    npm run format
+
+# Check formatting without modifying
+format-check:
+    npx prettier --check "src/**/*.ts" "__tests__/**/*.ts"
+
+# Run all checks (lint + format-check + test)
+check: lint format-check test
 
 # Development mode with TypeScript watch
 dev:
@@ -42,10 +62,3 @@ dev:
 # Install dependencies
 install:
     npm install
-
-# Check if everything is ready to build
-check:
-    @echo "Checking dependencies..."
-    @command -v cmake >/dev/null 2>&1 || { echo "cmake is required but not installed"; exit 1; }
-    @command -v node >/dev/null 2>&1 || { echo "node is required but not installed"; exit 1; }
-    @echo "All dependencies found"

@@ -1,6 +1,9 @@
 # PDF Text MCP - Monorepo Root Commands
 # Each package is independent and can be built/tested separately
 
+# Define all packages in dependency order
+packages := "pdf-parser mcp-server pdf-mcp-client example-agent-stdio example-agent-http"
+
 # List all available packages
 list:
     @echo "Available packages:"
@@ -14,77 +17,63 @@ help:
     @echo "  just list              - List all packages"
     @echo "  just build-all         - Build all packages"
     @echo "  just test-all          - Test all packages"
+    @echo "  just lint-all          - Lint all packages"
+    @echo "  just format-all        - Format all packages"
+    @echo "  just check-all         - Run all checks on all packages"
     @echo "  just clean-all         - Clean all packages"
     @echo "  just install-all       - Install dependencies for all packages"
+    @echo "  just setup             - Install dependencies and build everything"
+    @echo "  just doctor            - Check if required tools are installed"
     @echo ""
     @echo "Individual package commands:"
     @echo "  cd packages/<name> && just <command>"
     @echo ""
     @echo "Available commands per package:"
-    @echo "  build, test, lint, format, clean, dev"
+    @echo "  build, test, lint, format, clean, dev, check"
+
+# Helper recipe to run a command on all packages
+_run-on-all action verb success_msg:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ROOT_DIR="{{justfile_directory()}}"
+    echo "{{verb}} all packages..."
+    for pkg in {{packages}}; do
+        echo "==> $pkg"
+        (cd "$ROOT_DIR/packages/$pkg" && just {{action}})
+    done
+    echo "✓ {{success_msg}}"
 
 # Build all packages in dependency order
 build-all:
-    @echo "Building all packages..."
-    @echo "==> pdf-parser"
-    cd packages/pdf-parser && just build
-    @echo "==> mcp-server"
-    cd packages/mcp-server && just build
-    @echo "==> example-agent (no build needed)"
-    @echo "✓ All packages built successfully"
+    @just _run-on-all build "Building" "All packages built successfully"
 
 # Test all packages
 test-all:
-    @echo "Testing all packages..."
-    @echo "==> pdf-parser"
-    cd packages/pdf-parser && just test
-    @echo "==> mcp-server"
-    cd packages/mcp-server && just test
-    @echo "==> example-agent"
-    cd packages/example-agent && just test
-    @echo "✓ All tests passed"
-
-# Run all checks (lint, format, type-check, test) for all packages
-check-all:
-    @echo "Running checks on all packages..."
-    @echo "==> pdf-parser"
-    cd packages/pdf-parser && just test
-    @echo "==> mcp-server"
-    cd packages/mcp-server && just check
-    @echo "==> example-agent"
-    cd packages/example-agent && just check
-    @echo "✓ All checks passed"
+    @just _run-on-all test "Testing" "All tests passed"
 
 # Clean all packages
 clean-all:
-    @echo "Cleaning all packages..."
-    @echo "==> pdf-parser"
-    cd packages/pdf-parser && just clean
-    @echo "==> mcp-server"
-    cd packages/mcp-server && just clean
-    @echo "==> example-agent"
-    cd packages/example-agent && just clean
-    @echo "✓ All packages cleaned"
+    @just _run-on-all clean "Cleaning" "All packages cleaned"
 
 # Install dependencies for all packages
 install-all:
-    @echo "Installing dependencies for all packages..."
-    @echo "==> pdf-parser"
-    cd packages/pdf-parser && just install
-    @echo "==> mcp-server"
-    cd packages/mcp-server && just install
-    @echo "==> example-agent"
-    cd packages/example-agent && just install
-    @echo "✓ All dependencies installed"
+    @just _run-on-all install "Installing dependencies for" "All dependencies installed"
+
+# Lint all packages
+lint-all:
+    @just _run-on-all lint "Linting" "All packages linted"
+
+# Format all packages
+format-all:
+    @just _run-on-all format "Formatting" "All packages formatted"
+
+# Run all checks (lint, format-check, type-check, test) on all packages
+check-all:
+    @just _run-on-all check "Running all checks on" "All checks passed"
 
 # Setup: install dependencies and build everything
 setup: install-all build-all
     @echo "✓ Setup complete! All packages ready."
-
-# Run the complete demo (build everything and run example agent)
-demo: build-all
-    @echo "Running demo..."
-    cd packages/example-agent && just demo
 
 # Check if required tools are installed
 doctor:

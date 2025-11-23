@@ -51,10 +51,7 @@ export class PdfExtractor {
       const fileSize = stats.size;
 
       // Extract text using native binding with timeout
-      const result = await withTimeout(
-        this.extractTextNative(filePath),
-        this.options.timeout
-      );
+      const result = await withTimeout(this.extractTextNative(filePath), this.options.timeout);
 
       const processingTime = Date.now() - startTime;
 
@@ -123,10 +120,7 @@ export class PdfExtractor {
   async getMetadata(filePath: string): Promise<PdfMetadata> {
     try {
       await validateFile(filePath, this.options.maxFileSize);
-      return await withTimeout(
-        this.getMetadataNative(filePath),
-        this.options.timeout
-      );
+      return await withTimeout(this.getMetadataNative(filePath), this.options.timeout);
     } catch (error) {
       if (error instanceof PdfExtractionError) {
         throw error;
@@ -150,10 +144,7 @@ export class PdfExtractor {
           PdfErrorCode.FILE_TOO_LARGE
         );
       }
-      return await withTimeout(
-        this.getMetadataFromBufferNative(buffer),
-        this.options.timeout
-      );
+      return await withTimeout(this.getMetadataFromBufferNative(buffer), this.options.timeout);
     } catch (error) {
       if (error instanceof PdfExtractionError) {
         throw error;

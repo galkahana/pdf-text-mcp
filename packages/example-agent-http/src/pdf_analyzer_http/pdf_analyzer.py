@@ -5,8 +5,7 @@ This implementation is optimized to minimize LLM token usage:
 2. Summarization: Only extracted text sent to LLM (not the full PDF)
 """
 
-import json
-from typing import Any
+from typing import Any, Self
 
 from pdf_mcp_client import MCPHTTPClient
 from pydantic_ai import Agent
@@ -59,6 +58,7 @@ class PDFAnalyzerHTTP:
 
         # Optional: Create agent for summarization only
         self.use_agent = use_agent_for_summary
+        self.agent: Agent[None, str] | None
         if use_agent_for_summary:
             self.agent = Agent(
                 "gemini-2.5-flash",
@@ -194,14 +194,14 @@ class PDFAnalyzerHTTP:
 
         return result
 
-    async def close(self):
+    async def close(self) -> None:
         """Close connections."""
         await self.mcp_client.close()
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         await self.close()

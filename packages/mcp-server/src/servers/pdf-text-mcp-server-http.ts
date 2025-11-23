@@ -1,83 +1,56 @@
 /**
- * MCP Server Implementation for PDF Text Extraction over WebSocket.
+ * MCP Server Implementation for PDF Text Extraction over HTTP.
  */
-import { McpServer, ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
-import { PdfExtractor } from '@pdf-text-mcp/pdf-parser';
 import { ServerConfig } from '../types';
 import { FileContentParamsSchema, FileContentParamsType } from '../schemas/http';
 import { PDFTextMcpServer } from './pdf-text-mcp-server';
+import { BasePdfTextMcpServer } from './base-pdf-text-mcp-server';
 
 import express from 'express';
 import { createServer } from 'http';
 
-export class PdfTextMcpServerHttp implements PDFTextMcpServer {
-  private server: McpServer;
-  private extractor: PdfExtractor;
-  private config: ServerConfig;
-
+export class PdfTextMcpServerHttp extends BasePdfTextMcpServer {
   private requestCount: number = 0;
   private errorCount: number = 0;
   private httpServer?: any;
   private ready: boolean = false;
 
   constructor(config: ServerConfig) {
-    this.config = config;
-
-    // Create the MCP Server instance
-    // The Server class handles all the protocol details (JSON-RPC, initialization, etc.)
-    this.server = new McpServer(
-      {
-        name: config.name,
-        version: config.version,
-      },
-      {
-        capabilities: {
-          // We support tools (functions the AI can call)
-          tools: {},
-        },
-      }
-    );
-
-    // Initialize the PDF extractor with our configuration
-    // Note: Bidi is always enabled at the native library level (requires ICU)
-    this.extractor = new PdfExtractor({
-      maxFileSize: config.maxFileSize,
-      timeout: config.timeout,
-    });
-
-    this.setupTools();
+    super(config);
   }
 
-
-  private setupTools(): void {
+  protected setupTools(): void {
     this.server.registerTool(
       'extract_text',
       {
-        description: 'Extract text content from a PDF base64-encoded content. Bidirectional text (Hebrew, Arabic, etc.) is always supported. Returns the extracted text, page count, and processing metadata. Provide fileContent (base64-encoded PDF)',
+        description:
+          'Extract text content from a PDF base64-encoded content. Bidirectional text (Hebrew, Arabic, etc.) is always supported. Returns the extracted text, page count, and processing metadata. Provide fileContent (base64-encoded PDF)',
         inputSchema: FileContentParamsSchema,
       },
       this.createFileContentOperationHandler((fileContent: Buffer) =>
         this.extractor.extractTextFromBuffer(fileContent)
       )
-    )
+    );
 
     this.server.registerTool(
       'extract_metadata',
       {
-        description: 'Extract metadata from a PDF base64-encoded content including title, author, subject, creator, producer, dates, page count, and version. Provide fileContent (base64-encoded PDF)',
+        description:
+          'Extract metadata from a PDF base64-encoded content including title, author, subject, creator, producer, dates, page count, and version. Provide fileContent (base64-encoded PDF)',
         inputSchema: FileContentParamsSchema,
       },
       this.createFileContentOperationHandler((fileContent: Buffer) =>
         this.extractor.getMetadataFromBuffer(fileContent)
-      ),
+      )
     );
   }
 
   private createFileContentOperationHandler<T>(
-      operation: (fileContent: Buffer) => Promise<T>
-    ): ToolCallback<typeof FileContentParamsSchema> {
+    operation: (fileContent: Buffer) => Promise<T>
+  ): ToolCallback<typeof FileContentParamsSchema> {
     return async (args: FileContentParamsType) => {
       try {
         // Validate parameters
@@ -119,10 +92,33 @@ export class PdfTextMcpServerHttp implements PDFTextMcpServer {
   }
 
   /**
-   * Start the MCP server
-   * This connects the server to stdio or HTTP transport depending on configuration
+   * Start the MCP server with HTTP transport.
    */
   async start(): Promise<void> {
+    // Create HTTP server
+    this.httpServer = this.createHTTPServer();
+
+    // Start HTTP server
+    const port = this.config.port || 3000;
+    const host = this.config.host || '0.0.0.0';
+
+    await new Promise<void>((resolve) => {
+      this.httpServer.listen(port, host, () => {
+        console.error(`PDF Text Extraction MCP Server running on ${host}:${port}`);
+        console.error(`MCP endpoint: http://${host}:${port}/mcp`);
+        console.error(`Health check: http://${host}:${port}/health`);
+        console.error(`Readiness check: http://${host}:${port}/ready`);
+        console.error(`Metrics: http://${host}:${port}/metrics`);
+        this.logConfiguration('http', { apiKeyEnabled: !!this.config.apiKey });
+        resolve();
+      });
+    });
+
+    // Mark as ready
+    this.ready = true;
+  }
+
+  private createHTTPServer() {
     // Create Express app for health/metrics endpoints
     const app = express();
     // Increase body size limit for base64-encoded PDFs (default is 100kb)
@@ -153,7 +149,6 @@ export class PdfTextMcpServerHttp implements PDFTextMcpServer {
       });
     });
 
-
     // API key authentication middleware
     const authMiddleware = (req: any, res: any, next: any) => {
       if (this.config.apiKey) {
@@ -171,10 +166,10 @@ export class PdfTextMcpServerHttp implements PDFTextMcpServer {
     // Request tracking middleware for MCP endpoint
     const mcpTrackingMiddleware = async (_req: any, res: any, next: any) => {
       this.requestCount++;
-      
+
       try {
         await next();
-        
+
         // Track errors based on HTTP status code
         if (res.statusCode >= 400) {
           this.errorCount++;
@@ -192,45 +187,19 @@ export class PdfTextMcpServerHttp implements PDFTextMcpServer {
       // IDs, which would cause responses to be routed to the wrong HTTP connections
       // if the transport state is shared.
       const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: undefined,
-          enableJsonResponse: true
+        sessionIdGenerator: undefined,
+        enableJsonResponse: true,
       });
 
       res.on('close', () => {
-          transport.close();
+        transport.close();
       });
 
       await this.server.connect(transport);
       await transport.handleRequest(req, res, req.body);
     });
 
-    // Create HTTP server
-    this.httpServer = createServer(app);
-
-    // Start HTTP server
-    const port = this.config.port || 3000;
-    const host = this.config.host || '0.0.0.0';
-
-    await new Promise<void>(resolve => {
-      this.httpServer.listen(port, host, () => {
-        console.error(`PDF Text Extraction MCP Server running on ${host}:${port}`);
-        console.error(`MCP endpoint: http://${host}:${port}/mcp`);
-        console.error(`Health check: http://${host}:${port}/health`);
-        console.error(`Readiness check: http://${host}:${port}/ready`);
-        console.error(`Metrics: http://${host}:${port}/metrics`);
-        console.error(`Configuration:`, {
-          maxFileSize: this.config.maxFileSize,
-          timeout: this.config.timeout,
-          transportMode: 'http',
-          apiKeyEnabled: !!this.config.apiKey,
-          bidi: 'always enabled (requires ICU at build time)',
-        });
-        resolve();
-      });
-    });
-
-    // Mark as ready
-    this.ready = true;
+    return createServer(app);
   }
 
   /**
@@ -245,7 +214,7 @@ export class PdfTextMcpServerHttp implements PDFTextMcpServer {
 
     // Close HTTP server if running
     if (this.httpServer) {
-      await new Promise<void>(resolve => {
+      await new Promise<void>((resolve) => {
         this.httpServer.close(() => {
           console.error('HTTP server closed');
           resolve();

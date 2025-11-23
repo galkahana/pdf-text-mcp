@@ -63,11 +63,9 @@ def extract(pdf_path: str, mcp_url: str, api_key: str | None) -> None:
         pdf-analyzer-http extract document.pdf
     """
 
-    async def run():
+    async def run() -> None:
         try:
-            async with PDFAnalyzerHTTP(
-                mcp_url, api_key, use_agent_for_summary=False
-            ) as analyzer:
+            async with PDFAnalyzerHTTP(mcp_url, api_key, use_agent_for_summary=False) as analyzer:
                 text = await analyzer.extract_text(pdf_path)
                 print_section(
                     "EXTRACTED TEXT (via Direct HTTP - 0 tokens used)",
@@ -93,11 +91,9 @@ def metadata(pdf_path: str, mcp_url: str, api_key: str | None) -> None:
         pdf-analyzer-http metadata document.pdf --mcp-url http://localhost:3000
     """
 
-    async def run():
+    async def run() -> None:
         try:
-            async with PDFAnalyzerHTTP(
-                mcp_url, api_key, use_agent_for_summary=False
-            ) as analyzer:
+            async with PDFAnalyzerHTTP(mcp_url, api_key, use_agent_for_summary=False) as analyzer:
                 meta = await analyzer.extract_metadata(pdf_path)
                 print_section(
                     "PDF METADATA (via Direct HTTP - 0 tokens used)",
@@ -114,9 +110,7 @@ def metadata(pdf_path: str, mcp_url: str, api_key: str | None) -> None:
 @click.argument("pdf_path", type=click.Path(exists=True))
 @click.option("--mcp-url", type=str, required=True, envvar="MCP_SERVER_URL")
 @click.option("--api-key", type=str, envvar="MCP_API_KEY")
-@click.option(
-    "--no-agent", is_flag=True, help="Skip AI summarization, return raw text only"
-)
+@click.option("--no-agent", is_flag=True, help="Skip AI summarization, return raw text only")
 def summarize(pdf_path: str, mcp_url: str, api_key: str | None, no_agent: bool) -> None:
     """Summarize PDF (extraction via HTTP, optional AI summary).
 
@@ -137,10 +131,12 @@ def summarize(pdf_path: str, mcp_url: str, api_key: str | None, no_agent: bool) 
         pdf-analyzer-http summarize document.pdf --mcp-url http://localhost:3000 --no-agent
     """
 
-    async def run():
+    async def run() -> None:
         try:
             use_agent = not no_agent
-            async with PDFAnalyzerHTTP(mcp_url, api_key, use_agent_for_summary=use_agent) as analyzer:
+            async with PDFAnalyzerHTTP(
+                mcp_url, api_key, use_agent_for_summary=use_agent
+            ) as analyzer:
                 summary = await analyzer.summarize_pdf(pdf_path)
 
                 if use_agent:
@@ -172,7 +168,7 @@ def analyze(pdf_path: str, mcp_url: str, api_key: str | None) -> None:
         pdf-analyzer-http analyze document.pdf --mcp-url http://localhost:3000
     """
 
-    async def run():
+    async def run() -> None:
         try:
             async with PDFAnalyzerHTTP(mcp_url, api_key, use_agent_for_summary=True) as analyzer:
                 result = await analyzer.analyze_pdf(pdf_path)

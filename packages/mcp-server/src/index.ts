@@ -33,7 +33,8 @@ async function main() {
     const config = loadConfig();
 
     // Create and start the server
-    const server = config.transportMode === 'http' ? buildFromConfigHTTP(config) : buildFromConfigStdio(config);
+    const server =
+      config.transportMode === 'http' ? buildFromConfigHTTP(config) : buildFromConfigStdio(config);
     await server.start();
 
     // Handle graceful shutdown
