@@ -34,11 +34,13 @@ Model Context Protocol server for PDF text extraction using native C++ bindings.
 ```
 pdf-text-mcp/
 ├── packages/
-│   ├── pdf-parser/      # Native C++ addon + TypeScript wrapper
-│   ├── mcp-server/      # MCP protocol server
-│   └── example-agent/   # Python AI agent example (PydanticAI)
-├── .claude-session-data.md  # Claude context (development notes)
-└── README.md            # This file
+│   ├── pdf-parser/           # Native C++ addon + TypeScript wrapper
+│   ├── mcp-server/           # MCP protocol server (dual transport: stdio/HTTP)
+│   ├── pdf-mcp-client/       # Shared Python client library
+│   ├── example-agent-stdio/  # stdio transport example (local MCP usage)
+│   └── example-agent-http/   # HTTP transport example (token-efficient remote usage)
+├── .claude-session-data.md   # Claude context (development notes)
+└── README.md                 # This file
 ```
 
 ## Quick Start
@@ -87,7 +89,8 @@ cd packages/mcp-server && just build
 # Test specific package
 cd packages/pdf-parser && just test
 cd packages/mcp-server && just test
-cd packages/example-agent && just test
+cd packages/example-agent-stdio && just test
+cd packages/example-agent-http && just test
 
 # See available commands for a package
 cd packages/<name> && just --list
@@ -96,7 +99,9 @@ cd packages/<name> && just --list
 For detailed usage instructions:
 - **MCP Server setup**: See [packages/mcp-server/README.md](packages/mcp-server/README.md)
 - **PDF Parser API**: See [packages/pdf-parser/README.md](packages/pdf-parser/README.md)
-- **Example AI Agent**: See [packages/example-agent/README.md](packages/example-agent/README.md)
+- **Shared Client Library**: See [packages/pdf-mcp-client/README.md](packages/pdf-mcp-client/README.md)
+- **stdio Example (local)**: See [packages/example-agent-stdio/README.md](packages/example-agent-stdio/README.md)
+- **HTTP Example (remote, token-efficient)**: See [packages/example-agent-http/README.md](packages/example-agent-http/README.md)
 
 ## Available Commands
 
@@ -109,10 +114,11 @@ just doctor         # Check if required tools are installed
 just setup          # Install dependencies and build everything
 just build-all      # Build all packages in dependency order
 just test-all       # Test all packages
-just check-all      # Run all checks (lint, format, type-check, test)
+just lint-all       # Lint all packages
+just format-all     # Format all packages
+just check-all      # Run all checks (lint, format-check, type-check, test)
 just clean-all      # Clean all packages
 just install-all    # Install dependencies for all packages
-just demo           # Build and run example agent demo
 ```
 
 **Package-level commands** (run inside package directory):
@@ -124,8 +130,9 @@ Common commands available in all packages:
 - `just install` - Install dependencies
 
 Additional commands per package type:
-- **Node.js packages** (pdf-parser, mcp-server): `dev`, `lint`, `format`
-- **Python package** (example-agent): `lint`, `format`, `type-check`, `check`, `demo`
+- **Node.js packages** (pdf-parser, mcp-server): `dev`, `lint`, `format`, `test-watch`, `test-coverage`, `test-manual`
+- **Python packages** (pdf-mcp-client, example-agent-stdio, example-agent-http): `lint`, `format`, `type-check`, `check`, `test-verbose`, `test-coverage`
+- **mcp-server only**: Docker and Kubernetes commands (see mcp-server README)
 
 Run `just --list` inside any package to see all available commands.
 
@@ -134,12 +141,12 @@ Run `just --list` inside any package to see all available commands.
 - ✅ PDF text extraction (file and buffer)
 - ✅ Metadata extraction (title, author, dates, etc.)
 - ✅ Bidirectional text support (Hebrew, Arabic) - always enabled
-- ✅ MCP protocol integration
-- ✅ File size limits
-- ✅ Timeout protection (soft timeout)
-- ✅ TypeScript type definitions
-- ✅ Comprehensive test suite
-- ✅ Example AI agent with PydanticAI
+- ✅ MCP protocol integration (stdio + HTTP transports)
+- ✅ Token-efficient HTTP client for remote servers
+- ✅ File size limits and timeout protection
+- ✅ TypeScript + Python type definitions
+- ✅ Comprehensive test suite (85+ tests, 82%+ coverage)
+- ✅ Example AI agents with PydanticAI
 
 ## Packages
 
@@ -156,19 +163,38 @@ TypeScript library wrapping the pdf-text-extraction C++ library.
 
 MCP server exposing PDF extraction via JSON-RPC protocol.
 
-- stdio transport
+- **Dual transport**: stdio (local) and HTTP (remote)
 - `extract_text` and `extract_metadata` tools
 - Claude Desktop integration
-- Environment-based configuration
+- Docker/Kubernetes ready with health probes
+- API key authentication for HTTP mode
 
-### [example-agent](packages/example-agent/README.md)
+### [pdf-mcp-client](packages/pdf-mcp-client/README.md)
 
-Example AI agent demonstrating PDF summarization using PydanticAI.
+Shared Python client library for token-efficient PDF extraction.
+
+- Direct HTTP calls to MCP server (bypasses LLM - 0 tokens)
+- Base64 encoding and protocol helpers
+- Async/await API with httpx
+- 44 unit tests with full coverage
+
+### [example-agent-stdio](packages/example-agent-stdio/README.md)
+
+Example AI agent using stdio transport (local subprocess).
 
 - PydanticAI framework with Google Gemini
-- MCP client integration via stdio transport
-- PDF summarization, text extraction, and metadata analysis
-- Command-line interface with `uv`
+- MCP client via stdio transport
+- PDF summarization, text extraction, metadata analysis
+- Best for: Local development, Claude Desktop integration
+
+### [example-agent-http](packages/example-agent-http/README.md)
+
+Token-efficient AI agent using HTTP transport (remote server).
+
+- Direct HTTP extraction (0 tokens used)
+- Only sends extracted text to LLM (not the PDF)
+- 96% token cost reduction vs naive approaches
+- Best for: Production, remote servers, cost optimization
 
 ## Roadmap
 

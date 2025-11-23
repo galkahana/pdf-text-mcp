@@ -6,45 +6,46 @@ build:
 
 # Run tests
 test:
-    jest
+    npm test
 
 # Run tests in watch mode
 test-watch:
-    jest --watch
+    npm run test:watch
 
 # Run tests with coverage
 test-coverage:
-    jest --coverage
+    npm run test:coverage
 
 # Run manual integration tests
 test-manual:
-    node manual-tests/protocol-integration.js
+    npm run test:manual
 
 # Run all tests (unit + manual)
-test-all: test test-manual
+test-all:
+    npm run test:all
 
 # Lint check
 lint:
-    eslint src --ext .ts
+    npm run lint
 
 # Auto-fix linting issues
 lint-fix:
-    eslint src --ext .ts --fix
+    npm run lint -- --fix
 
 # Format code
 format:
-    prettier --write "src/**/*.ts"
+    npm run format
 
 # Check formatting without modifying
 format-check:
-    prettier --check "src/**/*.ts"
+    npx prettier --check "src/**/*.ts"
 
 # Run all checks (lint + format + test)
 check: lint format-check test
 
 # Clean build artifacts
 clean:
-    rm -rf dist/
+    rm -rf dist/ coverage/
 
 # Development mode with TypeScript watch
 dev:
@@ -139,9 +140,13 @@ k8s-status:
 k8s-logs:
     kubectl logs -n pdf-text-mcp -l app=pdf-text-mcp-server -f
 
-# Port forward to local machine
+# Port forward to local machine (for kubectl-deployed services)
 k8s-port-forward:
     kubectl port-forward -n pdf-text-mcp svc/pdf-text-mcp-server 3000:80
+
+# Port forward to local machine (for Helm-deployed services)
+helm-port-forward:
+    kubectl port-forward -n pdf-text-mcp svc/pdf-text-mcp-pdf-text-mcp-server 3000:80
 
 # === Helm Commands ===
 
@@ -211,7 +216,7 @@ minikube-full: minikube-build minikube-deploy
 
 # Get minikube service URL
 minikube-url:
-    minikube service pdf-text-mcp-server --namespace pdf-text-mcp --url
+    minikube service pdf-text-mcp-pdf-text-mcp-server --namespace pdf-text-mcp --url
 
 # Open minikube dashboard
 minikube-dashboard:
@@ -224,7 +229,7 @@ minikube-logs:
 # Test minikube deployment
 minikube-test:
     #!/usr/bin/env bash
-    URL=$(minikube service pdf-text-mcp-server --namespace pdf-text-mcp --url)
+    URL=$(minikube service pdf-text-mcp-pdf-text-mcp-server --namespace pdf-text-mcp --url)
     echo "Testing health endpoint..."
     curl ${URL}/health
     echo "\nTesting ready endpoint..."

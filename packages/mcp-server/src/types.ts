@@ -35,32 +35,31 @@ export interface ServerConfig {
  * Zod schema for extract_text tool parameters
  * This validates the JSON parameters sent by the AI
  */
-export const ExtractTextParamsSchema = z.object({
-  /** Path to the PDF file to extract text from */
-  filePath: z.string().optional().describe('Path to the PDF file to extract text from'),
-  /** Base64-encoded PDF content (alternative to filePath for remote deployment) */
-  fileContent: z.string().optional().describe('Base64-encoded PDF content'),
-}).refine(
-  (data) => data.filePath || data.fileContent,
-  { message: 'Either filePath or fileContent must be provided' }
-);
+export const ExtractTextParamsSchema = z
+  .object({
+    /** Path to the PDF file to extract text from */
+    filePath: z.string().optional().describe('Path to the PDF file to extract text from'),
+    /** Base64-encoded PDF content (alternative to filePath for remote deployment) */
+    fileContent: z.string().optional().describe('Base64-encoded PDF content'),
+  })
+  .refine((data) => data.filePath || data.fileContent, {
+    message: 'Either filePath or fileContent must be provided',
+  });
 
 export type ExtractTextParams = z.infer<typeof ExtractTextParamsSchema>;
 
 /**
  * Zod schema for extract_metadata tool parameters
  */
-export const ExtractMetadataParamsSchema = z.object({
-  /** Path to the PDF file to extract metadata from */
-  filePath: z
-    .string()
-    .optional()
-    .describe('Path to the PDF file to extract metadata from'),
-  /** Base64-encoded PDF content (alternative to filePath for remote deployment) */
-  fileContent: z.string().optional().describe('Base64-encoded PDF content'),
-}).refine(
-  (data) => data.filePath || data.fileContent,
-  { message: 'Either filePath or fileContent must be provided' }
-);
+export const ExtractMetadataParamsSchema = z
+  .object({
+    /** Path to the PDF file to extract metadata from */
+    filePath: z.string().optional().describe('Path to the PDF file to extract metadata from'),
+    /** Base64-encoded PDF content (alternative to filePath for remote deployment) */
+    fileContent: z.string().optional().describe('Base64-encoded PDF content'),
+  })
+  .refine((data) => data.filePath || data.fileContent, {
+    message: 'Either filePath or fileContent must be provided',
+  });
 
 export type ExtractMetadataParams = z.infer<typeof ExtractMetadataParamsSchema>;

@@ -18,12 +18,10 @@ export function loadConfig(): ServerConfig {
     version: '1.0.0',
     // Maximum file size (default: 100MB)
     maxFileSize: process.env.MAX_FILE_SIZE
-      ? parseInt(process.env.MAX_FILE_SIZE, 10)
+      ? Math.floor(Number(process.env.MAX_FILE_SIZE))
       : DEFAULT_MAX_FILE_SIZE,
     // Extraction timeout (default: 30 seconds)
-    timeout: process.env.TIMEOUT
-      ? parseInt(process.env.TIMEOUT, 10)
-      : DEFAULT_TIMEOUT,
+    timeout: process.env.TIMEOUT ? parseInt(process.env.TIMEOUT, 10) : DEFAULT_TIMEOUT,
     // Transport configuration
     transportMode,
     port: process.env.PORT ? parseInt(process.env.PORT, 10) : 3000,

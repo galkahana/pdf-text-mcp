@@ -62,6 +62,22 @@ test-output/
 # Docker
 docker-compose.override.yml
 
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.uv/
+
 # Claude Code session files (temporary conversation transcripts)
 session_*.md
 /session_*.md

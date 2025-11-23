@@ -1,9 +1,5 @@
 import { promises as fs } from 'fs';
-import {
-  PdfExtractionOptions,
-  PdfExtractionError,
-  PdfErrorCode,
-} from './types';
+import { PdfExtractionOptions, PdfExtractionError, PdfErrorCode } from './types';
 
 /**
  * Default configuration values
@@ -31,10 +27,7 @@ export async function validateFile(filePath: string, maxFileSize: number): Promi
     const stats = await fs.stat(filePath);
 
     if (!stats.isFile()) {
-      throw new PdfExtractionError(
-        `Path is not a file: ${filePath}`,
-        PdfErrorCode.INVALID_FILE
-      );
+      throw new PdfExtractionError(`Path is not a file: ${filePath}`, PdfErrorCode.INVALID_FILE);
     }
 
     if (stats.size > maxFileSize) {
@@ -52,17 +45,11 @@ export async function validateFile(filePath: string, maxFileSize: number): Promi
     }
 
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      throw new PdfExtractionError(
-        `File not found: ${filePath}`,
-        PdfErrorCode.INVALID_FILE
-      );
+      throw new PdfExtractionError(`File not found: ${filePath}`, PdfErrorCode.INVALID_FILE);
     }
 
     if ((error as NodeJS.ErrnoException).code === 'EACCES') {
-      throw new PdfExtractionError(
-        `File not readable: ${filePath}`,
-        PdfErrorCode.INVALID_FILE
-      );
+      throw new PdfExtractionError(`File not readable: ${filePath}`, PdfErrorCode.INVALID_FILE);
     }
 
     throw new PdfExtractionError(
@@ -130,10 +117,7 @@ export function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<
       setTimeout(
         () =>
           reject(
-            new PdfExtractionError(
-              `Operation timed out after ${timeoutMs}ms`,
-              PdfErrorCode.TIMEOUT
-            )
+            new PdfExtractionError(`Operation timed out after ${timeoutMs}ms`, PdfErrorCode.TIMEOUT)
           ),
         timeoutMs
       )

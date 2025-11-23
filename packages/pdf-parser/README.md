@@ -36,6 +36,21 @@ just test-coverage
 # Clean build artifacts
 just clean
 
+# Lint check
+just lint
+
+# Auto-fix linting issues
+just lint-fix
+
+# Format code
+just format
+
+# Check formatting without modifying
+just format-check
+
+# Run all checks (lint + format-check + test)
+just check
+
 # Development mode (watch)
 just dev
 
