@@ -34,11 +34,13 @@ Model Context Protocol server for PDF text extraction using native C++ bindings.
 ```
 pdf-text-mcp/
 ├── packages/
-│   ├── pdf-parser/      # Native C++ addon + TypeScript wrapper
-│   ├── mcp-server/      # MCP protocol server
-│   └── example-agent/   # Python AI agent example (PydanticAI)
-├── .claude-session-data.md  # Claude context (development notes)
-└── README.md            # This file
+│   ├── pdf-parser/           # Native C++ addon + TypeScript wrapper
+│   ├── mcp-server/           # MCP protocol server (dual transport: stdio/HTTP)
+│   ├── pdf-mcp-client/       # Shared Python client library
+│   ├── example-agent-stdio/  # stdio transport example (local MCP usage)
+│   └── example-agent-http/   # HTTP transport example (token-efficient remote usage)
+├── .claude-session-data.md   # Claude context (development notes)
+└── README.md                 # This file
 ```
 
 ## Quick Start
@@ -87,7 +89,8 @@ cd packages/mcp-server && just build
 # Test specific package
 cd packages/pdf-parser && just test
 cd packages/mcp-server && just test
-cd packages/example-agent && just test
+cd packages/example-agent-stdio && just test
+cd packages/example-agent-http && just test
 
 # See available commands for a package
 cd packages/<name> && just --list
@@ -96,7 +99,9 @@ cd packages/<name> && just --list
 For detailed usage instructions:
 - **MCP Server setup**: See [packages/mcp-server/README.md](packages/mcp-server/README.md)
 - **PDF Parser API**: See [packages/pdf-parser/README.md](packages/pdf-parser/README.md)
-- **Example AI Agent**: See [packages/example-agent/README.md](packages/example-agent/README.md)
+- **Shared Client Library**: See [packages/pdf-mcp-client/README.md](packages/pdf-mcp-client/README.md)
+- **stdio Example (local)**: See [packages/example-agent-stdio/README.md](packages/example-agent-stdio/README.md)
+- **HTTP Example (remote, token-efficient)**: See [packages/example-agent-http/README.md](packages/example-agent-http/README.md)
 
 ## Available Commands
 

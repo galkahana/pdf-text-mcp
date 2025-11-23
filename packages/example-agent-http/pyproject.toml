@@ -1,29 +1,34 @@
 [project]
-name = "pdf-summarizer"
+name = "pdf-analyzer-http"
 version = "0.1.0"
-description = "Example AI agent using PydanticAI to summarize PDFs via MCP"
+description = "Token-efficient PDF analyzer using HTTP transport for remote MCP servers"
 readme = "README.md"
 authors = [
     { name = "Gal Kahana", email = "galk@ziprecruiter.com" }
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
-    "pydantic-ai-slim[mcp,google]>=0.0.14",
+    "pydantic-ai-slim[google]>=0.0.14",
     "python-dotenv>=1.0.0",
     "click>=8.0.0",
+    "pdf-mcp-client",
 ]
+
+[tool.uv.sources]
+pdf-mcp-client = { path = "../pdf-mcp-client", editable = true }
 
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
+    "pytest-httpx>=0.30.0",
     "ruff>=0.8.0",
     "black>=24.0.0",
     "mypy>=1.13.0",
 ]
 
 [project.scripts]
-pdf-summarizer = "pdf_summarizer.main:main"
+pdf-analyzer-http = "pdf_analyzer_http.main:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -39,7 +44,7 @@ check = ["lint", "format-check", "type-check", "test"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = [
@@ -56,10 +61,10 @@ ignore = []
 
 [tool.black]
 line-length = 100
-target-version = ["py310"]
+target-version = ["py311"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 strict = true
 warn_return_any = true
 warn_unused_configs = true

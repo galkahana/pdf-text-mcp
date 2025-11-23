@@ -1,0 +1,76 @@
+[project]
+name = "pdf-summarizer-stdio"
+version = "0.1.0"
+description = "Example AI agent using PydanticAI to summarize PDFs via MCP (stdio transport)"
+readme = "README.md"
+authors = [
+    { name = "Gal Kahana", email = "galk@ziprecruiter.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic-ai-slim[mcp,google]>=0.0.14",
+    "python-dotenv>=1.0.0",
+    "click>=8.0.0",
+    "pdf-mcp-client",
+]
+
+[tool.uv.sources]
+pdf-mcp-client = { path = "../pdf-mcp-client", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.8.0",
+    "black>=24.0.0",
+    "mypy>=1.13.0",
+]
+
+[project.scripts]
+pdf-summarizer-stdio = "pdf_summarizer_stdio.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+lint = "ruff check {args:src tests}"
+format = "black {args:src tests}"
+format-check = "black --check {args:src tests}"
+type-check = "mypy {args:src}"
+check = ["lint", "format-check", "type-check", "test"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "C4",  # flake8-comprehensions
+]
+ignore = []
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+check_untyped_defs = true
