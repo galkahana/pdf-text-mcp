@@ -150,6 +150,20 @@ helm-port-forward:
 
 # === Helm Commands ===
 
+# Add required Helm repositories
+helm-repos:
+    @echo "Adding Helm repositories..."
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
+    helm repo add grafana https://grafana.github.io/helm-charts || true
+    helm repo update
+    @echo "✅ Helm repositories configured"
+
+# Build Helm chart dependencies (run this first after cloning)
+helm-deps: helm-repos
+    @echo "Building Helm chart dependencies..."
+    helm dependency build helm/pdf-text-mcp-server
+    @echo "✅ Dependencies built"
+
 # Validate Helm chart
 helm-lint:
     helm lint helm/pdf-text-mcp-server
@@ -157,6 +171,11 @@ helm-lint:
 # Preview Helm templates
 helm-template:
     helm template pdf-text-mcp helm/pdf-text-mcp-server
+
+# Preview Helm templates with minikube values
+helm-template-minikube:
+    helm template pdf-text-mcp helm/pdf-text-mcp-server \
+        -f helm/pdf-text-mcp-server/values-minikube.yaml
 
 # Install Helm chart (production)
 helm-install:
@@ -202,8 +221,8 @@ minikube-delete:
 minikube-build:
     eval $(minikube docker-env) && docker build -t pdf-text-mcp-server:dev -f Dockerfile ../..
 
-# Deploy to minikube using Helm with minikube values
-minikube-deploy:
+# Deploy to minikube using Helm with minikube values (includes dependency build)
+minikube-deploy: helm-deps
     helm upgrade --install pdf-text-mcp ./helm/pdf-text-mcp-server \
         --create-namespace \
         --namespace pdf-text-mcp \
