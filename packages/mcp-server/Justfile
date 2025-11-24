@@ -237,6 +237,65 @@ minikube-full: minikube-build minikube-deploy
 minikube-url:
     minikube service pdf-text-mcp-pdf-text-mcp-server --namespace pdf-text-mcp --url
 
+# Show all important URLs and access information
+minikube-info:
+    #!/usr/bin/env bash
+    echo "🚀 PDF Text MCP Server - Minikube Deployment Info"
+    echo "=================================================="
+    echo ""
+    echo "📦 Main Service:"
+    NODE_PORT=$(kubectl get svc pdf-text-mcp-pdf-text-mcp-server -n pdf-text-mcp -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null)
+    if [ -n "$NODE_PORT" ]; then
+        MINIKUBE_IP=$(minikube ip 2>/dev/null)
+        echo "  URL: http://${MINIKUBE_IP}:${NODE_PORT}"
+        echo "  Endpoints:"
+        echo "    - Health:     GET  http://${MINIKUBE_IP}:${NODE_PORT}/health"
+        echo "    - Ready:      GET  http://${MINIKUBE_IP}:${NODE_PORT}/ready"
+        echo "    - Metrics:    GET  http://${MINIKUBE_IP}:${NODE_PORT}/metrics"
+        echo "    - MCP:        POST http://${MINIKUBE_IP}:${NODE_PORT}/mcp"
+    else
+        echo "  Not available - run: just minikube-deploy"
+    fi
+    echo ""
+    echo "📊 Grafana Dashboard:"
+    GRAFANA_PORT=$(kubectl get svc pdf-text-mcp-grafana -n pdf-text-mcp -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null)
+    if [ -n "$GRAFANA_PORT" ]; then
+        MINIKUBE_IP=$(minikube ip 2>/dev/null)
+        echo "  URL: http://${MINIKUBE_IP}:${GRAFANA_PORT}"
+        echo "  Login: admin / admin"
+        echo "  Dashboards: Navigate to 'PDF MCP Server' folder"
+        echo "    - Overview: Metrics, latency, errors, memory"
+        echo "    - Logs: Structured log viewer"
+    else
+        echo "  Not available - observability not enabled"
+    fi
+    echo ""
+    echo "📈 Prometheus:"
+    PROM_SVC=$(kubectl get svc pdf-text-mcp-kube-promethe-prometheus -n pdf-text-mcp 2>/dev/null)
+    if [ -n "$PROM_SVC" ]; then
+        echo "  To access: kubectl port-forward -n pdf-text-mcp svc/pdf-text-mcp-kube-promethe-prometheus 9090:9090"
+        echo "  Then visit: http://localhost:9090"
+    else
+        echo "  Not available - observability not enabled"
+    fi
+    echo ""
+    echo "📝 Loki (Logs):"
+    LOKI_SVC=$(kubectl get svc pdf-text-mcp-loki -n pdf-text-mcp 2>/dev/null)
+    if [ -n "$LOKI_SVC" ]; then
+        echo "  To access: kubectl port-forward -n pdf-text-mcp svc/pdf-text-mcp-loki 3100:3100"
+        echo "  Then visit: http://localhost:3100"
+    else
+        echo "  Not available - observability not enabled"
+    fi
+    echo ""
+    echo "🔧 Kubernetes Dashboard:"
+    echo "  Run: just minikube-dashboard"
+    echo ""
+    echo "📋 Quick Commands:"
+    echo "  View pods:   kubectl get pods -n pdf-text-mcp"
+    echo "  View logs:   just minikube-logs"
+    echo "  Test health: just minikube-test"
+
 # Open minikube dashboard
 minikube-dashboard:
     minikube dashboard
