@@ -202,12 +202,12 @@ minikube-delete:
 minikube-build:
     eval $(minikube docker-env) && docker build -t pdf-text-mcp-server:dev -f Dockerfile ../..
 
-# Deploy to minikube using Helm with dev values
+# Deploy to minikube using Helm with minikube values
 minikube-deploy:
     helm upgrade --install pdf-text-mcp ./helm/pdf-text-mcp-server \
         --create-namespace \
         --namespace pdf-text-mcp \
-        -f ./helm/pdf-text-mcp-server/values-dev.yaml
+        -f ./helm/pdf-text-mcp-server/values-minikube.yaml
 
 # Build and deploy to minikube (complete workflow)
 minikube-full: minikube-build minikube-deploy

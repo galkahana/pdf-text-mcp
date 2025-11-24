@@ -140,12 +140,20 @@ kube-prometheus-stack:
       serviceMonitorSelector:
         matchLabels:
           app.kubernetes.io/part-of: pdf-text-mcp
-      # Additional scrape configs for direct service scraping
-      additionalScrapeConfigs:
-        - job_name: 'pdf-mcp-server'
-          static_configs:
-            - targets: ['pdf-text-mcp-pdf-text-mcp-server:80']
-          metrics_path: '/metrics'
+      # Additional scrape configs for direct service scraping (fallback if ServiceMonitor doesn't work)
+      additionalScrapeConfigs: []
+        # - job_name: 'pdf-mcp-server'
+        #   static_configs:
+        #     - targets: ['pdf-text-mcp-pdf-text-mcp-server:80']
+        #   metrics_path: '/metrics'
+
+    # Additional ServiceMonitors (alternative to creating ServiceMonitor templates)
+    # We still use templates because they're more flexible with Helm templating
+    additionalServiceMonitors: []
+
+    # Additional Prometheus Rules (alternative to creating PrometheusRule templates)
+    # We still use templates because they're more flexible with Helm templating
+    additionalPrometheusRulesMap: {}
 
   # Grafana configuration
   grafana:

@@ -1,0 +1,74 @@
+{{- if .Values.observability.prometheus.enabled }}
+---
+# PrometheusRule for PDF MCP Server alerts
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "pdf-text-mcp-server.fullname" . }}-alerts
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pdf-text-mcp-server.labels" . | nindent 4 }}
+    app.kubernetes.io/part-of: pdf-text-mcp
+    release: {{ .Release.Name }}
+spec:
+  groups:
+    - name: pdf_mcp_alerts
+      interval: 30s
+      rules:
+        # High error rate alert
+        - alert: HighErrorRate
+          expr: |
+            (
+              sum(rate(mcp_tool_invocations_total{namespace="{{ .Release.Namespace }}",status="error"}[5m]))
+              /
+              sum(rate(mcp_tool_invocations_total{namespace="{{ .Release.Namespace }}"}[5m]))
+            ) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+            component: pdf-mcp-server
+          annotations:
+            summary: "High error rate detected"
+            description: "Error rate is {{`{{ $value | humanizePercentage }}`}} (threshold: 5%)"
+
+        # High latency alert (p95 > 30s)
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(mcp_tool_execution_duration_seconds_bucket{namespace="{{ .Release.Namespace }}"}[5m])) by (le, tool_name)
+            ) > 30
+          for: 5m
+          labels:
+            severity: warning
+            component: pdf-mcp-server
+          annotations:
+            summary: "High latency detected for {{`{{ $labels.tool_name }}`}}"
+            description: "P95 latency is {{`{{ $value }}`}}s (threshold: 30s)"
+
+        # Service down alert
+        - alert: ServiceDown
+          expr: up{job="pdf-text-mcp-server",namespace="{{ .Release.Namespace }}"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            component: pdf-mcp-server
+          annotations:
+            summary: "PDF MCP Server is down"
+            description: "No metrics received from {{`{{ $labels.instance }}`}} for 2 minutes"
+
+        # Memory pressure alert
+        - alert: HighMemoryUsage
+          expr: |
+            (
+              memory_usage_bytes{namespace="{{ .Release.Namespace }}",type="heapUsed"}
+              /
+              memory_usage_bytes{namespace="{{ .Release.Namespace }}",type="heapTotal"}
+            ) > 0.8
+          for: 10m
+          labels:
+            severity: warning
+            component: pdf-mcp-server
+          annotations:
+            summary: "High memory usage detected"
+            description: "Memory usage is {{`{{ $value | humanizePercentage }}`}} (threshold: 80%)"
+{{- end }}
