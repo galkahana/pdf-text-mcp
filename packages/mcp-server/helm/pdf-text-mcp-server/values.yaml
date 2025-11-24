@@ -162,6 +162,10 @@ kube-prometheus-stack:
     service:
       type: NodePort
       nodePort: 30300
+    # Disable default datasource from kube-prometheus-stack
+    sidecar:
+      datasources:
+        defaultDatasourceEnabled: false
     # Pre-configured data sources
     datasources:
       datasources.yaml:

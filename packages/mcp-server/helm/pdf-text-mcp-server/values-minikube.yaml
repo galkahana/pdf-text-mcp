@@ -6,7 +6,7 @@ replicaCount: 1
 image:
   repository: pdf-text-mcp-server
   pullPolicy: IfNotPresent
-  tag: "optimized"
+  tag: "dev"
 
 serviceAccount:
   create: false
