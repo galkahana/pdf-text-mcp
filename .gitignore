@@ -62,6 +62,9 @@ test-output/
 # Docker
 docker-compose.override.yml
 
+# Helm chart dependencies (vendored)
+**/helm/**/charts/
+
 # Python cache files
 __pycache__/
 *.py[cod]
