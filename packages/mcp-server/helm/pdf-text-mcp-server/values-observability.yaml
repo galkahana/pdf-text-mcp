@@ -1,0 +1,32 @@
+# Values file with observability enabled for testing
+
+# Use single replica for minikube testing
+replicaCount: 1
+
+image:
+  repository: pdf-text-mcp-server
+  pullPolicy: IfNotPresent
+  tag: "phase6-obs"
+
+config:
+  transportMode: "http"
+  port: 3000
+  host: "0.0.0.0"
+  maxFileSize: 104857600
+  timeout: 30000
+
+# Enable observability
+observability:
+  prometheus:
+    enabled: true
+  loki:
+    enabled: true
+
+# Configure resource limits for minikube
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi

@@ -15,3 +15,18 @@ maintainers:
 home: https://github.com/galkahana/pdf-text-mcp
 sources:
   - https://github.com/galkahana/pdf-text-mcp
+
+# Observability stack dependencies (optional)
+dependencies:
+  - name: kube-prometheus-stack
+    version: "56.6.2"
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: observability.prometheus.enabled
+    tags:
+      - observability
+  - name: loki-stack
+    version: "2.10.2"
+    repository: https://grafana.github.io/helm-charts
+    condition: observability.loki.enabled
+    tags:
+      - observability
