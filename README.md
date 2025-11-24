@@ -226,15 +226,15 @@ Token-efficient AI agent using HTTP transport (remote server).
 - ✅ Docker image: 301MB
 
 ### Phase 6: Observability & Operations ✅
-**Status**: Complete
-Production-ready monitoring, logging, and metrics.
+**Status**: Complete - [PR #10](https://github.com/galkahana/pdf-text-mcp/pull/10)
 
 - ✅ Structured JSON logging with correlation IDs (Winston)
 - ✅ Prometheus-compatible metrics (requests, errors, latency, PDF stats)
 - ✅ Log aggregation with Loki + Promtail
-- ✅ Grafana dashboards (metrics + logs)
+- ✅ Grafana dashboards with searchable logs and metrics visualization
 - ✅ Alert rules configured in Prometheus
-- ✅ Full K8s observability stack manifests
+- ✅ Full K8s observability stack via Helm dependencies
+- ✅ Working log dashboard with table view, search, and analytics
 
 ### Phase 7: True Timeout with Async Workers ⏱️
 Proper cancellation and resource cleanup.
