@@ -12,8 +12,7 @@ metadata:
 data:
   pdf-mcp-overview.json: |
     {
-      "dashboard": {
-        "title": "PDF MCP Server - Overview",
+      "title": "PDF MCP Server - Overview",
         "tags": ["pdf-mcp", "overview"],
         "timezone": "browser",
         "schemaVersion": 16,
@@ -137,7 +136,6 @@ data:
             ]
           }
         ]
-      }
     }
 
 ---
@@ -153,8 +151,7 @@ metadata:
 data:
   pdf-mcp-logs.json: |
     {
-      "dashboard": {
-        "title": "PDF MCP Server - Logs",
+      "title": "PDF MCP Server - Logs",
         "tags": ["pdf-mcp", "logs"],
         "timezone": "browser",
         "schemaVersion": 16,
@@ -207,6 +204,5 @@ data:
             ]
           }
         ]
-      }
     }
 {{- end }}
