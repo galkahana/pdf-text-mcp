@@ -1,0 +1,188 @@
+---
+# Alertmanager ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: pdf-text-mcp
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+
+    # Templates for alert notifications
+    templates:
+      - '/etc/alertmanager/templates/*.tmpl'
+
+    # Route tree for alert notifications
+    route:
+      receiver: 'default'
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      routes:
+        # Critical alerts - immediate notification
+        - match:
+            severity: critical
+          receiver: 'critical'
+          continue: true
+        # Warning alerts - grouped notification
+        - match:
+            severity: warning
+          receiver: 'warning'
+
+    # Inhibition rules (suppress alerts when others are firing)
+    inhibit_rules:
+      # Suppress warning alerts when critical alerts are firing for the same service
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['alertname', 'component', 'instance']
+
+    # Receivers configuration
+    receivers:
+      # Default receiver (webhook or devnull)
+      - name: 'default'
+        webhook_configs:
+          - url: 'http://localhost:5001/'  # Example webhook endpoint
+            send_resolved: true
+
+      # Critical alerts receiver
+      - name: 'critical'
+        # Slack configuration (disabled by default - configure in production)
+        # slack_configs:
+        #   - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+        #     channel: '#alerts-critical'
+        #     title: 'Critical Alert'
+        #     text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        #     send_resolved: true
+
+        # Email configuration (disabled by default - configure in production)
+        # email_configs:
+        #   - to: 'oncall@example.com'
+        #     from: 'alertmanager@pdf-mcp.com'
+        #     smarthost: 'smtp.example.com:587'
+        #     auth_username: 'alertmanager@pdf-mcp.com'
+        #     auth_password: 'PASSWORD'
+        #     headers:
+        #       Subject: 'CRITICAL: {{ .GroupLabels.alertname }}'
+
+        # PagerDuty configuration (disabled by default - configure in production)
+        # pagerduty_configs:
+        #   - service_key: 'YOUR_PAGERDUTY_SERVICE_KEY'
+        #     description: '{{ .GroupLabels.alertname }}'
+
+        # Webhook fallback
+        webhook_configs:
+          - url: 'http://localhost:5001/'
+            send_resolved: true
+
+      # Warning alerts receiver
+      - name: 'warning'
+        # Slack configuration (disabled by default)
+        # slack_configs:
+        #   - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+        #     channel: '#alerts-warning'
+        #     title: 'Warning Alert'
+        #     text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        #     send_resolved: true
+
+        # Webhook fallback
+        webhook_configs:
+          - url: 'http://localhost:5001/'
+            send_resolved: true
+
+  # Alert notification templates (optional)
+  templates.tmpl: |
+    {{ define "slack.default.title" }}
+    [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.alertname }}
+    {{ end }}
+
+    {{ define "slack.default.text" }}
+    {{ range .Alerts }}
+    *Alert:* {{ .Labels.alertname }}
+    *Severity:* {{ .Labels.severity }}
+    *Summary:* {{ .Annotations.summary }}
+    *Description:* {{ .Annotations.description }}
+    {{ end }}
+    {{ end }}
+
+---
+# Alertmanager Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: pdf-text-mcp
+  labels:
+    app: alertmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.26.0
+          args:
+            - '--config.file=/etc/alertmanager/alertmanager.yml'
+            - '--storage.path=/alertmanager'
+            - '--web.external-url=http://localhost:9093'
+          ports:
+            - name: web
+              containerPort: 9093
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alertmanager
+            - name: data
+              mountPath: /alertmanager
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9093
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9093
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: alertmanager-config
+        - name: data
+          emptyDir: {}
+
+---
+# Alertmanager Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: pdf-text-mcp
+  labels:
+    app: alertmanager
+spec:
+  type: ClusterIP
+  ports:
+    - name: web
+      port: 9093
+      targetPort: 9093
+  selector:
+    app: alertmanager

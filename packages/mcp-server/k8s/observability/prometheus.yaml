@@ -1,0 +1,249 @@
+---
+# Prometheus ConfigMap with scrape config and alert rules
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: pdf-text-mcp
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'pdf-mcp'
+        environment: 'production'
+
+    # Alert rule files
+    rule_files:
+      - '/etc/prometheus/rules/*.yml'
+
+    # Alertmanager configuration
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+                - alertmanager:9093
+
+    # Scrape configurations
+    scrape_configs:
+      # Scrape Prometheus itself
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      # Scrape PDF MCP Server metrics via service
+      - job_name: 'pdf-mcp-server'
+        static_configs:
+          - targets: ['pdf-text-mcp-pdf-text-mcp-server.pdf-text-mcp.svc.cluster.local:80']
+        metrics_path: '/metrics'
+
+  alert-rules.yml: |
+    groups:
+      - name: pdf_mcp_alerts
+        interval: 30s
+        rules:
+          # High error rate alert
+          - alert: HighErrorRate
+            expr: |
+              (
+                sum(rate(mcp_tool_invocations_total{status="error"}[5m]))
+                /
+                sum(rate(mcp_tool_invocations_total[5m]))
+              ) > 0.05
+            for: 2m
+            labels:
+              severity: warning
+              component: pdf-mcp-server
+            annotations:
+              summary: "High error rate detected"
+              description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+          # High latency alert (p95 > 30s)
+          - alert: HighLatency
+            expr: |
+              histogram_quantile(0.95,
+                sum(rate(mcp_tool_execution_duration_seconds_bucket[5m])) by (le, tool_name)
+              ) > 30
+            for: 5m
+            labels:
+              severity: warning
+              component: pdf-mcp-server
+            annotations:
+              summary: "High latency detected for {{ $labels.tool_name }}"
+              description: "P95 latency is {{ $value }}s (threshold: 30s)"
+
+          # Service down alert
+          - alert: ServiceDown
+            expr: up{job="pdf-mcp-server"} == 0
+            for: 2m
+            labels:
+              severity: critical
+              component: pdf-mcp-server
+            annotations:
+              summary: "PDF MCP Server is down"
+              description: "No metrics received from {{ $labels.instance }} for 2 minutes"
+
+          # Pod restart alert
+          - alert: PodRestartingFrequently
+            expr: |
+              rate(kube_pod_container_status_restarts_total{namespace="pdf-mcp"}[15m]) > 0.1
+            for: 5m
+            labels:
+              severity: warning
+              component: pdf-mcp-server
+            annotations:
+              summary: "Pod restarting frequently"
+              description: "Pod {{ $labels.pod }} is restarting frequently ({{ $value }} restarts/second)"
+
+          # Memory pressure alert
+          - alert: HighMemoryUsage
+            expr: |
+              (
+                memory_usage_bytes{type="heapUsed"}
+                /
+                memory_usage_bytes{type="heapTotal"}
+              ) > 0.8
+            for: 10m
+            labels:
+              severity: warning
+              component: pdf-mcp-server
+            annotations:
+              summary: "High memory usage detected"
+              description: "Memory usage is {{ $value | humanizePercentage }} (threshold: 80%)"
+
+---
+# Prometheus Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: pdf-text-mcp
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      serviceAccountName: prometheus
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.48.0
+          args:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--storage.tsdb.path=/prometheus'
+            - '--storage.tsdb.retention.time=7d'
+            - '--web.console.libraries=/etc/prometheus/console_libraries'
+            - '--web.console.templates=/etc/prometheus/consoles'
+            - '--web.enable-lifecycle'
+          ports:
+            - name: web
+              containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+            - name: rules
+              mountPath: /etc/prometheus/rules
+            - name: data
+              mountPath: /prometheus
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+            items:
+              - key: prometheus.yml
+                path: prometheus.yml
+        - name: rules
+          configMap:
+            name: prometheus-config
+            items:
+              - key: alert-rules.yml
+                path: alert-rules.yml
+        - name: data
+          emptyDir: {}
+
+---
+# Prometheus Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: pdf-text-mcp
+  labels:
+    app: prometheus
+spec:
+  type: ClusterIP
+  ports:
+    - name: web
+      port: 9090
+      targetPort: 9090
+  selector:
+    app: prometheus
+
+---
+# Prometheus ServiceAccount with RBAC for Kubernetes service discovery
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: pdf-text-mcp
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - nodes/proxy
+      - services
+      - endpoints
+      - pods
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources:
+      - configmaps
+    verbs: ["get"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: pdf-text-mcp
