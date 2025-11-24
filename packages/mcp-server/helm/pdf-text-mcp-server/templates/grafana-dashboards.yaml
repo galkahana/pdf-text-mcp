@@ -1,0 +1,160 @@
+{{- if .Values.observability.prometheus.enabled }}
+---
+# Grafana Dashboard - PDF MCP Overview
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pdf-text-mcp-server.fullname" . }}-grafana-dashboard-overview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pdf-text-mcp-server.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "PDF MCP Server"
+data:
+  pdf-mcp-overview.json: |
+    {
+      "title": "PDF MCP Server - Overview",
+      "tags": ["pdf-mcp", "overview"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "30s",
+      "uid": "pdf-mcp-overview",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Request Rate",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "rate(mcp_tool_invocations_total[5m])",
+                "legendFormat": "{{`{{tool_name}}`}} - {{`{{status}}`}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "reqps", "label": "Requests/sec"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Error Rate",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "rate(mcp_tool_invocations_total{status=\"error\"}[5m]) / rate(mcp_tool_invocations_total[5m])",
+                "legendFormat": "{{`{{tool_name}}`}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "percentunit", "label": "Error Rate"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Request Latency (P50, P95, P99)",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.50, sum(rate(mcp_tool_execution_duration_seconds_bucket[5m])) by (le, tool_name))",
+                "legendFormat": "P50 - {{`{{tool_name}}`}}"
+              },
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(mcp_tool_execution_duration_seconds_bucket[5m])) by (le, tool_name))",
+                "legendFormat": "P95 - {{`{{tool_name}}`}}"
+              },
+              {
+                "expr": "histogram_quantile(0.99, sum(rate(mcp_tool_execution_duration_seconds_bucket[5m])) by (le, tool_name))",
+                "legendFormat": "P99 - {{`{{tool_name}}`}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "s", "label": "Latency"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 4,
+            "title": "PDF File Sizes",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.50, sum(rate(pdf_file_size_bytes_bucket[5m])) by (le))",
+                "legendFormat": "P50"
+              },
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(pdf_file_size_bytes_bucket[5m])) by (le))",
+                "legendFormat": "P95"
+              }
+            ],
+            "yaxes": [
+              {"format": "bytes", "label": "File Size"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Memory Usage",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+            "targets": [
+              {
+                "expr": "memory_usage_bytes{type=\"heapUsed\"}",
+                "legendFormat": "Heap Used"
+              },
+              {
+                "expr": "memory_usage_bytes{type=\"heapTotal\"}",
+                "legendFormat": "Heap Total"
+              },
+              {
+                "expr": "memory_usage_bytes{type=\"rss\"}",
+                "legendFormat": "RSS"
+              }
+            ],
+            "yaxes": [
+              {"format": "bytes", "label": "Memory"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 6,
+            "title": "HTTP Requests",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+            "targets": [
+              {
+                "expr": "rate(http_requests_total[5m])",
+                "legendFormat": "{{`{{method}}`}} {{`{{path}}`}} - {{`{{status_code}}`}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "reqps", "label": "Requests/sec"},
+              {"format": "short"}
+            ]
+          }
+        ]
+    }
+
+---
+# Grafana Dashboard - PDF MCP Logs
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pdf-text-mcp-server.fullname" . }}-grafana-dashboard-logs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pdf-text-mcp-server.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "PDF MCP Server"
+data:
+  pdf-mcp-logs.json: |-
+{{- $dashboard := .Files.Get "dashboards/logs.json" | replace "NAMESPACE_PLACEHOLDER" .Release.Namespace | replace "FULLNAME_PLACEHOLDER" (include "pdf-text-mcp-server.fullname" .) }}
+{{ $dashboard | nindent 4 }}
+{{- end }}

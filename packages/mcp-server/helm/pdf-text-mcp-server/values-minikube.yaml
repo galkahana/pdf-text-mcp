@@ -6,7 +6,7 @@ replicaCount: 1
 image:
   repository: pdf-text-mcp-server
   pullPolicy: IfNotPresent
-  tag: "optimized"
+  tag: "dev"
 
 serviceAccount:
   create: false
@@ -65,3 +65,10 @@ readinessProbe:
   timeoutSeconds: 2
   successThreshold: 1
   failureThreshold: 2
+
+# Enable observability for testing
+observability:
+  prometheus:
+    enabled: true
+  loki:
+    enabled: true

@@ -1,0 +1,231 @@
+{
+  "title": "PDF MCP Server - Logs",
+  "tags": ["pdf-mcp", "logs"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "uid": "pdf-mcp-logs",
+  "editable": true,
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        },
+        "hide": 0,
+        "label": "Search",
+        "name": "message_filter",
+        "options": [
+          {
+            "selected": true,
+            "text": "",
+            "value": ""
+          }
+        ],
+        "query": "",
+        "skipUrlSync": false,
+        "type": "textbox"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Recent Logs",
+      "type": "table",
+      "gridPos": {"h": 16, "w": 24, "x": 0, "y": 0},
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "targets": [
+        {
+          "expr": "{namespace=\"NAMESPACE_PLACEHOLDER\", pod=~\"FULLNAME_PLACEHOLDER.*\"} | json | line_format \"{{.log}}\" | json | message =~ `(?i).*${message_filter}.*`",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "P8E80F9AEF21F6940"
+          },
+          "queryType": "range",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": ["sum"],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "replace": true,
+            "source": "Line"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "timestamp": 0,
+              "level": 1,
+              "message": 2,
+              "service": 3,
+              "method": 4,
+              "path": 5,
+              "duration": 6,
+              "statusCode": 7,
+              "correlationId": 8,
+              "fileSize": 9,
+              "toolName": 10,
+              "pageCount": 11,
+              "processingTime": 12
+            },
+            "renameByName": {
+              "service": ""
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Log Level Distribution",
+      "type": "piechart",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "targets": [
+        {
+          "expr": "sum by (level) (count_over_time({namespace=\"NAMESPACE_PLACEHOLDER\", pod=~\"FULLNAME_PLACEHOLDER.*\"} | json | line_format \"{{.log}}\" | json [1h]))",
+          "legendFormat": "{{level}}",
+          "datasource": {
+            "type": "loki",
+            "uid": "P8E80F9AEF21F6940"
+          },
+          "instant": false,
+          "range": true,
+          "refId": "A",
+          "queryType": "range",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayLabels": ["name", "percent"],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": ["value"]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Errors Over Time",
+      "type": "graph",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate({namespace=\"NAMESPACE_PLACEHOLDER\", pod=~\"FULLNAME_PLACEHOLDER.*\"} | json | json log=\"log\" | level=\"error\" [5m]))",
+          "legendFormat": "Error Rate",
+          "datasource": {
+            "type": "loki",
+            "uid": "P8E80F9AEF21F6940"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "yaxes": [
+        {"format": "short", "label": "Errors/sec"},
+        {"format": "short"}
+      ],
+      "lines": true,
+      "fill": 1,
+      "linewidth": 2,
+      "nullPointMode": "null as zero",
+      "bars": false,
+      "percentage": false,
+      "legend": {
+        "show": true
+      },
+      "thresholds": [],
+      "xaxis": {
+        "mode": "time",
+        "show": true
+      }
+    }
+  ]
+}

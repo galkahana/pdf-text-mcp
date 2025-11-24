@@ -1,0 +1,22 @@
+{{- if .Values.observability.prometheus.enabled }}
+---
+# ServiceMonitor for Prometheus Operator to scrape PDF MCP Server
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "pdf-text-mcp-server.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pdf-text-mcp-server.labels" . | nindent 4 }}
+    app.kubernetes.io/part-of: pdf-text-mcp
+    release: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "pdf-text-mcp-server.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+{{- end }}

@@ -150,6 +150,20 @@ helm-port-forward:
 
 # === Helm Commands ===
 
+# Add required Helm repositories
+helm-repos:
+    @echo "Adding Helm repositories..."
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
+    helm repo add grafana https://grafana.github.io/helm-charts || true
+    helm repo update
+    @echo "✅ Helm repositories configured"
+
+# Build Helm chart dependencies (run this first after cloning)
+helm-deps: helm-repos
+    @echo "Building Helm chart dependencies..."
+    helm dependency build helm/pdf-text-mcp-server
+    @echo "✅ Dependencies built"
+
 # Validate Helm chart
 helm-lint:
     helm lint helm/pdf-text-mcp-server
@@ -157,6 +171,11 @@ helm-lint:
 # Preview Helm templates
 helm-template:
     helm template pdf-text-mcp helm/pdf-text-mcp-server
+
+# Preview Helm templates with minikube values
+helm-template-minikube:
+    helm template pdf-text-mcp helm/pdf-text-mcp-server \
+        -f helm/pdf-text-mcp-server/values-minikube.yaml
 
 # Install Helm chart (production)
 helm-install:
@@ -202,21 +221,67 @@ minikube-delete:
 minikube-build:
     eval $(minikube docker-env) && docker build -t pdf-text-mcp-server:dev -f Dockerfile ../..
 
-# Deploy to minikube using Helm with dev values
-minikube-deploy:
+# Deploy to minikube using Helm with minikube values (includes dependency build)
+minikube-deploy: helm-deps
     helm upgrade --install pdf-text-mcp ./helm/pdf-text-mcp-server \
         --create-namespace \
         --namespace pdf-text-mcp \
-        -f ./helm/pdf-text-mcp-server/values-dev.yaml
+        -f ./helm/pdf-text-mcp-server/values-minikube.yaml
 
 # Build and deploy to minikube (complete workflow)
 minikube-full: minikube-build minikube-deploy
     @echo "✅ Built and deployed to minikube"
     @echo "Run 'just minikube-url' to get the service URL"
 
-# Get minikube service URL
-minikube-url:
-    minikube service pdf-text-mcp-pdf-text-mcp-server --namespace pdf-text-mcp --url
+# Open tunnel to MCP server (run in separate terminal, keeps tunnel open)
+minikube-tunnel:
+    @echo "🚇 Opening tunnel to MCP server..."
+    @echo "⚠️  This will keep running - use Ctrl+C to stop"
+    @echo ""
+    minikube service pdf-text-mcp-pdf-text-mcp-server --namespace pdf-text-mcp
+
+# Open tunnel to Grafana (run in separate terminal, keeps tunnel open)
+minikube-tunnel-grafana:
+    @echo "🚇 Opening tunnel to Grafana..."
+    @echo "⚠️  This will keep running - use Ctrl+C to stop"
+    @echo ""
+    minikube service pdf-text-mcp-grafana --namespace pdf-text-mcp
+
+# Port-forward MCP server to localhost:3000
+minikube-forward:
+    @echo "🔀 Port-forwarding MCP server to localhost:3000..."
+    @echo "⚠️  This will keep running - use Ctrl+C to stop"
+    @echo ""
+    kubectl port-forward -n pdf-text-mcp svc/pdf-text-mcp-pdf-text-mcp-server 3000:80
+
+# Show all important URLs and access information
+minikube-info:
+    #!/usr/bin/env bash
+    echo "🚀 PDF Text MCP Server - Minikube Deployment Info"
+    echo "=================================================="
+    echo ""
+    echo "📦 Main Service:"
+    SVC_EXISTS=$(kubectl get svc pdf-text-mcp-pdf-text-mcp-server -n pdf-text-mcp 2>/dev/null)
+    if [ -n "$SVC_EXISTS" ]; then
+        echo "  Run: just minikube-tunnel"
+        echo "  Endpoints: /health /ready /metrics /mcp"
+    else
+        echo "  Not available - run: just minikube-deploy"
+    fi
+    echo ""
+    echo "📊 Grafana Dashboard:"
+    GRAFANA_SVC=$(kubectl get svc pdf-text-mcp-grafana -n pdf-text-mcp 2>/dev/null)
+    if [ -n "$GRAFANA_SVC" ]; then
+        echo "  Run: just minikube-tunnel-grafana"
+        echo "  Login: admin / admin"
+    else
+        echo "  Not available - observability not enabled"
+    fi
+    echo ""
+    echo "📋 Quick Commands:"
+    echo "  Logs:   just minikube-logs"
+    echo "  Pods:   kubectl get pods -n pdf-text-mcp"
+    echo "  Test:   just minikube-test"
 
 # Open minikube dashboard
 minikube-dashboard:

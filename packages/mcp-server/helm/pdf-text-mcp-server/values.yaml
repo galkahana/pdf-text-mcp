@@ -112,3 +112,215 @@ readinessProbe:
   timeoutSeconds: 3
   successThreshold: 1
   failureThreshold: 3
+
+# Observability configuration
+observability:
+  # Enable/disable Prometheus monitoring
+  prometheus:
+    enabled: false
+
+  # Enable/disable Loki logging
+  loki:
+    enabled: false
+
+# kube-prometheus-stack configuration (when observability.prometheus.enabled=true)
+kube-prometheus-stack:
+  # Prometheus configuration
+  prometheus:
+    prometheusSpec:
+      retention: 7d
+      resources:
+        requests:
+          memory: 512Mi
+          cpu: 250m
+        limits:
+          memory: 1Gi
+          cpu: 500m
+      # ServiceMonitor selector - discovers ServiceMonitors with this label
+      serviceMonitorSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: pdf-text-mcp
+      # Additional scrape configs for direct service scraping (fallback if ServiceMonitor doesn't work)
+      additionalScrapeConfigs: []
+        # - job_name: 'pdf-mcp-server'
+        #   static_configs:
+        #     - targets: ['pdf-text-mcp-pdf-text-mcp-server:80']
+        #   metrics_path: '/metrics'
+
+    # Additional ServiceMonitors (alternative to creating ServiceMonitor templates)
+    # We still use templates because they're more flexible with Helm templating
+    additionalServiceMonitors: []
+
+    # Additional Prometheus Rules (alternative to creating PrometheusRule templates)
+    # We still use templates because they're more flexible with Helm templating
+    additionalPrometheusRulesMap: {}
+
+  # Grafana configuration
+  grafana:
+    enabled: true
+    adminPassword: admin
+    service:
+      type: NodePort
+      nodePort: 30300
+    # Disable default datasource from kube-prometheus-stack
+    sidecar:
+      datasources:
+        defaultDatasourceEnabled: false
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+        labelValue: "1"
+        folder: /tmp/dashboards
+        folderAnnotation: grafana_folder
+        provider:
+          foldersFromFilesStructure: true
+    # Pre-configured data sources
+    datasources:
+      datasources.yaml:
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            url: http://pdf-text-mcp-kube-promethe-prometheus:9090
+            access: proxy
+            isDefault: true
+          - name: Loki
+            type: loki
+            url: http://pdf-text-mcp-loki:3100
+            access: proxy
+            isDefault: false
+    # Dashboard provisioning
+    dashboardProviders:
+      dashboardproviders.yaml:
+        apiVersion: 1
+        providers:
+          - name: 'pdf-mcp'
+            orgId: 1
+            folder: 'PDF MCP Server'
+            type: file
+            disableDeletion: false
+            editable: true
+            options:
+              path: /var/lib/grafana/dashboards/pdf-mcp
+    # Disable default k8s dashboards
+    defaultDashboardsEnabled: false
+    defaultDashboardsTimezone: browser
+    # Import dashboards from ConfigMaps
+    dashboards:
+      pdf-mcp:
+        pdf-mcp-overview:
+          gnetId: null
+          datasource: Prometheus
+        pdf-mcp-logs:
+          gnetId: null
+          datasource: Loki
+
+  # Alertmanager configuration
+  alertmanager:
+    enabled: true
+    config:
+      global:
+        resolve_timeout: 5m
+      route:
+        group_by: ['alertname', 'cluster', 'service']
+        group_wait: 10s
+        group_interval: 10s
+        repeat_interval: 12h
+        receiver: 'default'
+      receivers:
+        - name: 'default'
+          # Add webhook, email, or other notification configs here
+      inhibit_rules:
+        - source_match:
+            severity: 'critical'
+          target_match:
+            severity: 'warning'
+          equal: ['alertname', 'cluster', 'service']
+
+# loki-stack configuration (when observability.loki.enabled=true)
+loki-stack:
+  loki:
+    enabled: true
+    persistence:
+      enabled: false
+    config:
+      auth_enabled: false
+      ingester:
+        chunk_idle_period: 3m
+        chunk_block_size: 262144
+        chunk_retain_period: 1m
+        max_transfer_retries: 0
+        lifecycler:
+          ring:
+            kvstore:
+              store: inmemory
+            replication_factor: 1
+      limits_config:
+        retention_period: 168h  # 7 days
+        enforce_metric_name: false
+        reject_old_samples: true
+        reject_old_samples_max_age: 168h
+      schema_config:
+        configs:
+          - from: 2020-10-24
+            store: boltdb-shipper
+            object_store: filesystem
+            schema: v11
+            index:
+              prefix: index_
+              period: 24h
+      server:
+        http_listen_port: 3100
+      storage_config:
+        boltdb_shipper:
+          active_index_directory: /data/loki/boltdb-shipper-active
+          cache_location: /data/loki/boltdb-shipper-cache
+          cache_ttl: 24h
+          shared_store: filesystem
+        filesystem:
+          directory: /data/loki/chunks
+      chunk_store_config:
+        max_look_back_period: 0s
+      table_manager:
+        retention_deletes_enabled: true
+        retention_period: 168h
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 200m
+
+  promtail:
+    enabled: true
+    config:
+      clients:
+        - url: http://{{ .Release.Name }}-loki:3100/loki/api/v1/push
+      snippets:
+        pipelineStages:
+          - cri: {}
+          - json:
+              expressions:
+                level: level
+                timestamp: timestamp
+                message: message
+                correlationId: correlationId
+                toolName: toolName
+                fileSize: fileSize
+                pageCount: pageCount
+                processingTime: processingTime
+          - labels:
+              level:
+              correlationId:
+              toolName:
+          - timestamp:
+              source: timestamp
+              format: RFC3339
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 256Mi
+        cpu: 200m
