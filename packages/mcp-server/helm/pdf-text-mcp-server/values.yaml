@@ -173,12 +173,12 @@ kube-prometheus-stack:
         datasources:
           - name: Prometheus
             type: prometheus
-            url: http://kube-prometheus-stack-prometheus:9090
+            url: http://pdf-text-mcp-kube-promethe-prometheus:9090
             access: proxy
             isDefault: true
           - name: Loki
             type: loki
-            url: http://loki:3100
+            url: http://pdf-text-mcp-loki:3100
             access: proxy
             isDefault: false
     # Dashboard provisioning

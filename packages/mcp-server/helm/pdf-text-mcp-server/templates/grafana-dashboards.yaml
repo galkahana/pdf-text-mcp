@@ -9,15 +9,18 @@ metadata:
   labels:
     {{- include "pdf-text-mcp-server.labels" . | nindent 4 }}
     grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "PDF MCP Server"
 data:
   pdf-mcp-overview.json: |
     {
       "title": "PDF MCP Server - Overview",
-        "tags": ["pdf-mcp", "overview"],
-        "timezone": "browser",
-        "schemaVersion": 16,
-        "version": 1,
-        "refresh": "30s",
+      "tags": ["pdf-mcp", "overview"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "30s",
+      "uid": "pdf-mcp-overview",
         "panels": [
           {
             "id": 1,
@@ -148,15 +151,18 @@ metadata:
   labels:
     {{- include "pdf-text-mcp-server.labels" . | nindent 4 }}
     grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "PDF MCP Server"
 data:
   pdf-mcp-logs.json: |
     {
       "title": "PDF MCP Server - Logs",
-        "tags": ["pdf-mcp", "logs"],
-        "timezone": "browser",
-        "schemaVersion": 16,
-        "version": 1,
-        "refresh": "30s",
+      "tags": ["pdf-mcp", "logs"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "30s",
+      "uid": "pdf-mcp-logs",
         "panels": [
           {
             "id": 1,
