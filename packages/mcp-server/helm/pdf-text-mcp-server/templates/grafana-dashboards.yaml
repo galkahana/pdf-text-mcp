@@ -154,61 +154,7 @@ metadata:
   annotations:
     grafana_folder: "PDF MCP Server"
 data:
-  pdf-mcp-logs.json: |
-    {
-      "title": "PDF MCP Server - Logs",
-      "tags": ["pdf-mcp", "logs"],
-      "timezone": "browser",
-      "schemaVersion": 16,
-      "version": 1,
-      "refresh": "30s",
-      "uid": "pdf-mcp-logs",
-        "panels": [
-          {
-            "id": 1,
-            "title": "Recent Logs",
-            "type": "logs",
-            "gridPos": {"h": 16, "w": 24, "x": 0, "y": 0},
-            "targets": [
-              {
-                "expr": "{namespace=\"{{ .Release.Namespace }}\", app=\"{{ include "pdf-text-mcp-server.name" . }}\"}",
-                "refId": "A"
-              }
-            ],
-            "options": {
-              "showTime": true,
-              "showLabels": true,
-              "sortOrder": "Descending"
-            }
-          },
-          {
-            "id": 2,
-            "title": "Log Level Distribution",
-            "type": "piechart",
-            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
-            "targets": [
-              {
-                "expr": "sum by (level) (count_over_time({namespace=\"{{ .Release.Namespace }}\", app=\"{{ include "pdf-text-mcp-server.name" . }}\"}[1h]))",
-                "legendFormat": "{{`{{level}}`}}"
-              }
-            ]
-          },
-          {
-            "id": 3,
-            "title": "Errors Over Time",
-            "type": "graph",
-            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
-            "targets": [
-              {
-                "expr": "sum(rate({namespace=\"{{ .Release.Namespace }}\", app=\"{{ include "pdf-text-mcp-server.name" . }}\", level=\"error\"}[5m]))",
-                "legendFormat": "Error Rate"
-              }
-            ],
-            "yaxes": [
-              {"format": "short", "label": "Errors/sec"},
-              {"format": "short"}
-            ]
-          }
-        ]
-    }
+  pdf-mcp-logs.json: |-
+{{- $dashboard := .Files.Get "dashboards/logs.json" | replace "NAMESPACE_PLACEHOLDER" .Release.Namespace | replace "FULLNAME_PLACEHOLDER" (include "pdf-text-mcp-server.fullname" .) }}
+{{ $dashboard | nindent 4 }}
 {{- end }}

@@ -166,6 +166,14 @@ kube-prometheus-stack:
     sidecar:
       datasources:
         defaultDatasourceEnabled: false
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+        labelValue: "1"
+        folder: /tmp/dashboards
+        folderAnnotation: grafana_folder
+        provider:
+          foldersFromFilesStructure: true
     # Pre-configured data sources
     datasources:
       datasources.yaml:
@@ -194,6 +202,9 @@ kube-prometheus-stack:
             editable: true
             options:
               path: /var/lib/grafana/dashboards/pdf-mcp
+    # Disable default k8s dashboards
+    defaultDashboardsEnabled: false
+    defaultDashboardsTimezone: browser
     # Import dashboards from ConfigMaps
     dashboards:
       pdf-mcp:
