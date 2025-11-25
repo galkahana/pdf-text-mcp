@@ -9,9 +9,22 @@ import {
 } from './types';
 import { validateFile, createDefaultOptions, withTimeout } from './utils';
 
+interface NativeAddon {
+  extractTextFromFile: (
+    filePath: string,
+    bidiDirection: number
+  ) => Promise<{ text: string; pageCount: number }>;
+  extractTextFromBuffer: (
+    buffer: Buffer,
+    bidiDirection: number
+  ) => Promise<{ text: string; pageCount: number }>;
+  getMetadataFromFile: (filePath: string) => Promise<PdfMetadata>;
+  getMetadataFromBuffer: (buffer: Buffer) => Promise<PdfMetadata>;
+}
+
 // Load native addon
 // The native addon is built by cmake-js and placed in the build/Release directory
-let nativeAddon: any;
+let nativeAddon: NativeAddon;
 try {
   const addonPath = path.join(__dirname, '..', 'build', 'Release', 'pdf_parser_native.node');
   nativeAddon = require(addonPath);
@@ -161,85 +174,31 @@ export class PdfExtractor {
   // Note: Bidi direction is always LTR (0). The bidi algorithm is ALWAYS applied
   // by the native library when ICU is available (required at build time).
   //
-  // TIMEOUT LIMITATION: These native calls use synchronous C++ code wrapped in Promises.
-  // The timeout is "soft" - it rejects the promise after the timeout, but the native
-  // code continues running in the background until completion.
-  // TODO: Implement true cancellation using N-API async workers (see FUTURE_FEATURES.md)
+  // These methods now use N-API async workers with true cancellation support.
+  // The promise contains a _worker reference that can be used for cancellation.
   private async extractTextNative(filePath: string): Promise<{
     text: string;
     pageCount: number;
   }> {
-    return new Promise((resolve, reject) => {
-      try {
-        const result = nativeAddon.extractTextFromFile(filePath, 0 /* LTR */);
-        resolve(result);
-      } catch (error) {
-        reject(
-          new PdfExtractionError(
-            `Native extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            PdfErrorCode.NATIVE_ERROR,
-            error
-          )
-        );
-      }
-    });
+    const promise = nativeAddon.extractTextFromFile(filePath, 0 /* LTR */);
+    return promise;
   }
 
   private async extractTextFromBufferNative(buffer: Buffer): Promise<{
     text: string;
     pageCount: number;
   }> {
-    return new Promise((resolve, reject) => {
-      try {
-        const result = nativeAddon.extractTextFromBuffer(buffer, 0 /* LTR */);
-        resolve(result);
-      } catch (error) {
-        reject(
-          new PdfExtractionError(
-            `Native extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            PdfErrorCode.NATIVE_ERROR,
-            error
-          )
-        );
-      }
-    });
+    const promise = nativeAddon.extractTextFromBuffer(buffer, 0 /* LTR */);
+    return promise;
   }
 
   private async getMetadataNative(filePath: string): Promise<PdfMetadata> {
-    return new Promise((resolve, reject) => {
-      try {
-        const result = nativeAddon.getMetadataFromFile(filePath);
-        // Dates are returned as PDF date strings (e.g., "D:20220101120000")
-        // Leave them as strings for now - can be parsed later if needed
-        resolve(result);
-      } catch (error) {
-        reject(
-          new PdfExtractionError(
-            `Native metadata extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            PdfErrorCode.NATIVE_ERROR,
-            error
-          )
-        );
-      }
-    });
+    const promise = nativeAddon.getMetadataFromFile(filePath);
+    return promise;
   }
 
   private async getMetadataFromBufferNative(buffer: Buffer): Promise<PdfMetadata> {
-    return new Promise((resolve, reject) => {
-      try {
-        const result = nativeAddon.getMetadataFromBuffer(buffer);
-        // Dates are returned as PDF date strings (e.g., "D:20220101120000")
-        // Leave them as strings for now - can be parsed later if needed
-        resolve(result);
-      } catch (error) {
-        reject(
-          new PdfExtractionError(
-            `Native metadata extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            PdfErrorCode.NATIVE_ERROR,
-            error
-          )
-        );
-      }
-    });
+    const promise = nativeAddon.getMetadataFromBuffer(buffer);
+    return promise;
   }
 }

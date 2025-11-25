@@ -1,4 +1,5 @@
 import { promises as fs } from 'fs';
+import * as path from 'path';
 import { PdfExtractionOptions, PdfExtractionError, PdfErrorCode } from './types';
 
 /**
@@ -107,20 +108,59 @@ export function formatProcessingTime(milliseconds: number): string {
   return `${minutes}m ${remainingSeconds.toFixed(1)}s`;
 }
 
+interface PromiseWithWorker<T> extends Promise<T> {
+  _worker?: unknown;
+}
+
+interface NativeAddon {
+  cancelOperation?: (worker: unknown) => void;
+}
+
 /**
  * Create a promise that times out after specified milliseconds
+ * Now with true cancellation support for native worker promises
  */
 export function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(
-        () =>
-          reject(
-            new PdfExtractionError(`Operation timed out after ${timeoutMs}ms`, PdfErrorCode.TIMEOUT)
-          ),
-        timeoutMs
-      )
-    ),
-  ]);
+  let timeoutId: NodeJS.Timeout;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      // Try to cancel the native worker if it exists
+      const promiseWithWorker = promise as PromiseWithWorker<T>;
+      if (promiseWithWorker._worker) {
+        try {
+          // Load the native addon to access cancelOperation
+          const addonPath = path.join(
+            __dirname,
+            '..',
+            'build',
+            'Release',
+            'pdf_parser_native.node'
+          );
+          let nativeAddon: NativeAddon;
+          try {
+            // Dynamic require is necessary here to load the native module
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            nativeAddon = require(addonPath) as NativeAddon;
+          } catch {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            nativeAddon = require('../build/Release/pdf_parser_native.node') as NativeAddon;
+          }
+
+          // Cancel the worker
+          if (nativeAddon.cancelOperation) {
+            nativeAddon.cancelOperation(promiseWithWorker._worker);
+          }
+        } catch (error) {
+          // Cancellation failed, but we'll still reject with timeout
+        }
+      }
+
+      reject(
+        new PdfExtractionError(`Operation timed out after ${timeoutMs}ms`, PdfErrorCode.TIMEOUT)
+      );
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise.finally(() => clearTimeout(timeoutId)), timeoutPromise]);
 }
