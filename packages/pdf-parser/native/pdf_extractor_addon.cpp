@@ -9,6 +9,7 @@
 #include <string>
 #include <memory>
 #include <chrono>
+#include <atomic>
 #include "TextExtraction.h"
 #include "ErrorsAndWarnings.h"
 #include "lib/text-composition/TextComposer.h"
@@ -116,18 +117,32 @@ std::string GetStringFromPDFObject(PDFObject* obj) {
  * Core text extraction logic (shared by file and buffer operations)
  * Works with any IByteReaderWithPosition stream source
  * Bidi algorithm is always applied with the specified direction
+ * Supports cancellation via atomic flag
  */
 struct TextExtractionResult {
     std::string text;
     int pageCount;
     int bidiDirection;
+    bool cancelled;
 };
 
-TextExtractionResult ExtractTextCore(IByteReaderWithPosition* stream, int bidiDirection) {
+TextExtractionResult ExtractTextCore(IByteReaderWithPosition* stream, int bidiDirection, std::atomic<bool>* cancelFlag = nullptr) {
+    // Check for cancellation before starting
+    if (cancelFlag && cancelFlag->load()) {
+        return {"", 0, bidiDirection, true};
+    }
+
     TextExtraction textExtraction;
 
     // Extract text from all pages (-1 means all pages)
+    // Note: The underlying library doesn't support cancellation during extraction,
+    // but we check before and after the operation
     PDFHummus::EStatusCode status = textExtraction.ExtractText(stream, 0, -1);
+
+    // Check for cancellation after extraction
+    if (cancelFlag && cancelFlag->load()) {
+        return {"", 0, bidiDirection, true};
+    }
 
     if (status != PDFHummus::eSuccess) {
         std::string errorMsg = "Extraction failed";
@@ -144,13 +159,93 @@ TextExtractionResult ExtractTextCore(IByteReaderWithPosition* stream, int bidiDi
     // Count pages
     int pageCount = static_cast<int>(textExtraction.textsForPages.size());
 
-    return {extractedText, pageCount, bidiDirection};
+    return {extractedText, pageCount, bidiDirection, false};
 }
 
 /**
+ * AsyncWorker for text extraction from file
+ * Runs extraction in worker thread with cancellation support
+ */
+class TextExtractionWorker : public Napi::AsyncWorker {
+public:
+    TextExtractionWorker(Napi::Env env, const std::string& filePath, int bidiDirection)
+        : Napi::AsyncWorker(env),
+          filePath_(filePath),
+          bidiDirection_(bidiDirection),
+          cancelled_(false),
+          result_{"", 0, bidiDirection, false},
+          deferred_(Napi::Promise::Deferred::New(env)) {
+    }
+
+    ~TextExtractionWorker() {}
+
+    // Get the promise that will resolve/reject when work is done
+    Napi::Promise GetPromise() {
+        return deferred_.Promise();
+    }
+
+    // Called from JS thread to cancel the operation
+    void Cancel() {
+        cancelled_.store(true);
+    }
+
+protected:
+    // Runs in worker thread
+    void Execute() override {
+        try {
+            // Open PDF file
+            InputFile pdfFile;
+            PDFHummus::EStatusCode status = pdfFile.OpenFile(filePath_);
+
+            if (status != PDFHummus::eSuccess) {
+                SetError("Failed to open PDF file");
+                return;
+            }
+
+            // Check cancellation before extraction
+            if (cancelled_.load()) {
+                SetError("Operation cancelled");
+                return;
+            }
+
+            // Get the file stream and delegate to core function
+            IByteReaderWithPosition* stream = pdfFile.GetInputStream();
+            result_ = ExtractTextCore(stream, bidiDirection_, &cancelled_);
+
+            if (result_.cancelled) {
+                SetError("Operation cancelled");
+            }
+
+        } catch (const std::exception& e) {
+            SetError(std::string("Extraction failed: ") + e.what());
+        }
+    }
+
+    // Runs in JS thread after Execute completes
+    void OnOK() override {
+        Napi::Env env = Env();
+        Napi::Object napiResult = Napi::Object::New(env);
+        napiResult.Set("text", Napi::String::New(env, result_.text));
+        napiResult.Set("pageCount", Napi::Number::New(env, result_.pageCount));
+        napiResult.Set("bidiDirection", Napi::Number::New(env, result_.bidiDirection));
+        deferred_.Resolve(napiResult);
+    }
+
+    void OnError(const Napi::Error& e) override {
+        deferred_.Reject(e.Value());
+    }
+
+private:
+    std::string filePath_;
+    int bidiDirection_;
+    std::atomic<bool> cancelled_;
+    TextExtractionResult result_;
+    Napi::Promise::Deferred deferred_;
+};
+
+/**
  * Extract text from PDF file
- * Opens file and delegates to stream-based core function
- * Bidi algorithm is always applied; direction can be specified (defaults to LTR)
+ * Returns a promise and stores worker reference for cancellation
  */
 Napi::Value ExtractTextFromFile(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
@@ -161,44 +256,103 @@ Napi::Value ExtractTextFromFile(const Napi::CallbackInfo& info) {
     }
 
     std::string filePath = info[0].As<Napi::String>().Utf8Value();
-    // Always use LTR (0) - bidi algorithm is always applied for proper text ordering
     int bidiDirection = 0;  // 0 = LTR (Left-to-Right)
 
     if (info.Length() > 1 && info[1].IsNumber()) {
         bidiDirection = info[1].As<Napi::Number>().Int32Value();
     }
 
-    try {
-        // Open PDF file
-        InputFile pdfFile;
-        PDFHummus::EStatusCode status = pdfFile.OpenFile(filePath);
+    // Create async worker
+    TextExtractionWorker* worker = new TextExtractionWorker(env, filePath, bidiDirection);
 
-        if (status != PDFHummus::eSuccess) {
-            throw std::runtime_error("Failed to open PDF file");
-        }
+    // Store worker reference on the promise for cancellation
+    Napi::Promise promise = worker->GetPromise();
+    Napi::Object promiseObj = promise.As<Napi::Object>();
+    promiseObj.Set("_worker", Napi::External<TextExtractionWorker>::New(env, worker));
 
-        // Get the file stream and delegate to core function
-        IByteReaderWithPosition* stream = pdfFile.GetInputStream();
-        TextExtractionResult result = ExtractTextCore(stream, bidiDirection);
+    // Queue the work
+    worker->Queue();
 
-        // Build result object
-        Napi::Object napiResult = Napi::Object::New(env);
-        napiResult.Set("text", Napi::String::New(env, result.text));
-        napiResult.Set("pageCount", Napi::Number::New(env, result.pageCount));
-        napiResult.Set("bidiDirection", Napi::Number::New(env, result.bidiDirection));
-
-        return napiResult;
-
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, std::string("Extraction failed: ") + e.what()).ThrowAsJavaScriptException();
-        return env.Null();
-    }
+    return promise;
 }
 
 /**
+ * AsyncWorker for text extraction from buffer
+ * Runs extraction in worker thread with cancellation support
+ */
+class TextExtractionFromBufferWorker : public Napi::AsyncWorker {
+public:
+    TextExtractionFromBufferWorker(Napi::Env env, const uint8_t* data, size_t size, int bidiDirection)
+        : Napi::AsyncWorker(env),
+          bufferData_(new uint8_t[size]),
+          bufferSize_(size),
+          bidiDirection_(bidiDirection),
+          cancelled_(false),
+          result_{"", 0, bidiDirection, false},
+          deferred_(Napi::Promise::Deferred::New(env)) {
+        // Copy buffer data for use in worker thread
+        std::memcpy(bufferData_.get(), data, size);
+    }
+
+    ~TextExtractionFromBufferWorker() {}
+
+    Napi::Promise GetPromise() {
+        return deferred_.Promise();
+    }
+
+    void Cancel() {
+        cancelled_.store(true);
+    }
+
+protected:
+    void Execute() override {
+        try {
+            // Check cancellation before extraction
+            if (cancelled_.load()) {
+                SetError("Operation cancelled");
+                return;
+            }
+
+            // Create a buffer reader for direct stream access
+            BufferByteReader bufferReader(bufferData_.get(), bufferSize_);
+
+            // Delegate to core function
+            result_ = ExtractTextCore(&bufferReader, bidiDirection_, &cancelled_);
+
+            if (result_.cancelled) {
+                SetError("Operation cancelled");
+            }
+
+        } catch (const std::exception& e) {
+            SetError(std::string("Extraction failed: ") + e.what());
+        }
+    }
+
+    void OnOK() override {
+        Napi::Env env = Env();
+        Napi::Object napiResult = Napi::Object::New(env);
+        napiResult.Set("text", Napi::String::New(env, result_.text));
+        napiResult.Set("pageCount", Napi::Number::New(env, result_.pageCount));
+        napiResult.Set("bidiDirection", Napi::Number::New(env, result_.bidiDirection));
+        deferred_.Resolve(napiResult);
+    }
+
+    void OnError(const Napi::Error& e) override {
+        deferred_.Reject(e.Value());
+    }
+
+private:
+    std::unique_ptr<uint8_t[]> bufferData_;
+    size_t bufferSize_;
+    int bidiDirection_;
+    std::atomic<bool> cancelled_;
+    TextExtractionResult result_;
+    Napi::Promise::Deferred deferred_;
+};
+
+/**
  * Extract text from PDF buffer
- * Creates buffer stream and delegates to stream-based core function
- * Bidi algorithm is always applied; direction can be specified (defaults to LTR)
+ * Returns a promise and stores worker reference for cancellation
  */
 Napi::Value ExtractTextFromBuffer(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
@@ -209,37 +363,31 @@ Napi::Value ExtractTextFromBuffer(const Napi::CallbackInfo& info) {
     }
 
     Napi::Buffer<uint8_t> buffer = info[0].As<Napi::Buffer<uint8_t>>();
-    // Always use LTR (0) - bidi algorithm is always applied for proper text ordering
     int bidiDirection = 0;  // 0 = LTR (Left-to-Right)
 
     if (info.Length() > 1 && info[1].IsNumber()) {
         bidiDirection = info[1].As<Napi::Number>().Int32Value();
     }
 
-    try {
-        // Create a buffer reader for direct stream access
-        BufferByteReader bufferReader(buffer.Data(), buffer.Length());
+    // Create async worker
+    TextExtractionFromBufferWorker* worker = new TextExtractionFromBufferWorker(
+        env, buffer.Data(), buffer.Length(), bidiDirection);
 
-        // Delegate to core function
-        TextExtractionResult result = ExtractTextCore(&bufferReader, bidiDirection);
+    // Store worker reference on the promise for cancellation
+    Napi::Promise promise = worker->GetPromise();
+    Napi::Object promiseObj = promise.As<Napi::Object>();
+    promiseObj.Set("_worker", Napi::External<TextExtractionFromBufferWorker>::New(env, worker));
 
-        // Build result object
-        Napi::Object napiResult = Napi::Object::New(env);
-        napiResult.Set("text", Napi::String::New(env, result.text));
-        napiResult.Set("pageCount", Napi::Number::New(env, result.pageCount));
-        napiResult.Set("bidiDirection", Napi::Number::New(env, result.bidiDirection));
+    // Queue the work
+    worker->Queue();
 
-        return napiResult;
-
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, std::string("Extraction failed: ") + e.what()).ThrowAsJavaScriptException();
-        return env.Null();
-    }
+    return promise;
 }
 
 /**
  * Core metadata extraction logic (shared by file and buffer operations)
  * Works with any IByteReaderWithPosition stream source
+ * Supports cancellation via atomic flag
  */
 struct MetadataExtractionResult {
     unsigned long pageCount;
@@ -251,9 +399,15 @@ struct MetadataExtractionResult {
     std::string producer;
     std::string creationDate;
     std::string modificationDate;
+    bool cancelled;
 };
 
-MetadataExtractionResult ExtractMetadataCore(IByteReaderWithPosition* stream) {
+MetadataExtractionResult ExtractMetadataCore(IByteReaderWithPosition* stream, std::atomic<bool>* cancelFlag = nullptr) {
+    // Check for cancellation before starting
+    if (cancelFlag && cancelFlag->load()) {
+        return {0, "", "", "", "", "", "", "", "", true};
+    }
+
     // Create parser and parse from stream
     PDFParser parser;
     PDFHummus::EStatusCode status = parser.StartPDFParsing(stream);
@@ -262,7 +416,13 @@ MetadataExtractionResult ExtractMetadataCore(IByteReaderWithPosition* stream) {
         throw std::runtime_error("Failed to parse PDF from stream");
     }
 
+    // Check for cancellation after parsing
+    if (cancelFlag && cancelFlag->load()) {
+        return {0, "", "", "", "", "", "", "", "", true};
+    }
+
     MetadataExtractionResult result = {};
+    result.cancelled = false;
 
     // Get page count
     result.pageCount = parser.GetPagesCount();
@@ -333,8 +493,85 @@ void SetMetadataField(Napi::Object& obj, const std::string& key, const std::stri
 }
 
 /**
+ * AsyncWorker for metadata extraction from file
+ */
+class MetadataExtractionWorker : public Napi::AsyncWorker {
+public:
+    MetadataExtractionWorker(Napi::Env env, const std::string& filePath)
+        : Napi::AsyncWorker(env),
+          filePath_(filePath),
+          cancelled_(false),
+          result_{0, "", "", "", "", "", "", "", "", false},
+          deferred_(Napi::Promise::Deferred::New(env)) {
+    }
+
+    ~MetadataExtractionWorker() {}
+
+    Napi::Promise GetPromise() {
+        return deferred_.Promise();
+    }
+
+    void Cancel() {
+        cancelled_.store(true);
+    }
+
+protected:
+    void Execute() override {
+        try {
+            if (cancelled_.load()) {
+                SetError("Operation cancelled");
+                return;
+            }
+
+            InputFile pdfFile;
+            PDFHummus::EStatusCode status = pdfFile.OpenFile(filePath_);
+
+            if (status != PDFHummus::eSuccess) {
+                SetError("Failed to open PDF file");
+                return;
+            }
+
+            IByteReaderWithPosition* stream = pdfFile.GetInputStream();
+            result_ = ExtractMetadataCore(stream, &cancelled_);
+
+            if (result_.cancelled) {
+                SetError("Operation cancelled");
+            }
+
+        } catch (const std::exception& e) {
+            SetError(std::string("Metadata extraction failed: ") + e.what());
+        }
+    }
+
+    void OnOK() override {
+        Napi::Env env = Env();
+        Napi::Object result = Napi::Object::New(env);
+        result.Set("pageCount", Napi::Number::New(env, result_.pageCount));
+        result.Set("version", Napi::String::New(env, result_.version));
+        SetMetadataField(result, "title", result_.title, env);
+        SetMetadataField(result, "author", result_.author, env);
+        SetMetadataField(result, "subject", result_.subject, env);
+        SetMetadataField(result, "creator", result_.creator, env);
+        SetMetadataField(result, "producer", result_.producer, env);
+        SetMetadataField(result, "creationDate", result_.creationDate, env);
+        SetMetadataField(result, "modificationDate", result_.modificationDate, env);
+        deferred_.Resolve(result);
+    }
+
+    void OnError(const Napi::Error& e) override {
+        deferred_.Reject(e.Value());
+    }
+
+private:
+    std::string filePath_;
+    std::atomic<bool> cancelled_;
+    MetadataExtractionResult result_;
+    Napi::Promise::Deferred deferred_;
+};
+
+/**
  * Get PDF metadata from file
- * Opens file and delegates to stream-based core function
+ * Returns a promise and stores worker reference for cancellation
  */
 Napi::Value GetMetadataFromFile(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
@@ -346,42 +583,92 @@ Napi::Value GetMetadataFromFile(const Napi::CallbackInfo& info) {
 
     std::string filePath = info[0].As<Napi::String>().Utf8Value();
 
-    try {
-        // Open PDF file
-        InputFile pdfFile;
-        PDFHummus::EStatusCode status = pdfFile.OpenFile(filePath);
+    MetadataExtractionWorker* worker = new MetadataExtractionWorker(env, filePath);
 
-        if (status != PDFHummus::eSuccess) {
-            throw std::runtime_error("Failed to open PDF file");
-        }
+    Napi::Promise promise = worker->GetPromise();
+    Napi::Object promiseObj = promise.As<Napi::Object>();
+    promiseObj.Set("_worker", Napi::External<MetadataExtractionWorker>::New(env, worker));
 
-        // Get the file stream and delegate to core function
-        IByteReaderWithPosition* stream = pdfFile.GetInputStream();
-        MetadataExtractionResult metadata = ExtractMetadataCore(stream);
+    worker->Queue();
 
-        // Build result object
-        Napi::Object result = Napi::Object::New(env);
-        result.Set("pageCount", Napi::Number::New(env, metadata.pageCount));
-        result.Set("version", Napi::String::New(env, metadata.version));
-        SetMetadataField(result, "title", metadata.title, env);
-        SetMetadataField(result, "author", metadata.author, env);
-        SetMetadataField(result, "subject", metadata.subject, env);
-        SetMetadataField(result, "creator", metadata.creator, env);
-        SetMetadataField(result, "producer", metadata.producer, env);
-        SetMetadataField(result, "creationDate", metadata.creationDate, env);
-        SetMetadataField(result, "modificationDate", metadata.modificationDate, env);
-
-        return result;
-
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, std::string("Metadata extraction failed: ") + e.what()).ThrowAsJavaScriptException();
-        return env.Null();
-    }
+    return promise;
 }
 
 /**
+ * AsyncWorker for metadata extraction from buffer
+ */
+class MetadataExtractionFromBufferWorker : public Napi::AsyncWorker {
+public:
+    MetadataExtractionFromBufferWorker(Napi::Env env, const uint8_t* data, size_t size)
+        : Napi::AsyncWorker(env),
+          bufferData_(new uint8_t[size]),
+          bufferSize_(size),
+          cancelled_(false),
+          result_{0, "", "", "", "", "", "", "", "", false},
+          deferred_(Napi::Promise::Deferred::New(env)) {
+        std::memcpy(bufferData_.get(), data, size);
+    }
+
+    ~MetadataExtractionFromBufferWorker() {}
+
+    Napi::Promise GetPromise() {
+        return deferred_.Promise();
+    }
+
+    void Cancel() {
+        cancelled_.store(true);
+    }
+
+protected:
+    void Execute() override {
+        try {
+            if (cancelled_.load()) {
+                SetError("Operation cancelled");
+                return;
+            }
+
+            BufferByteReader bufferReader(bufferData_.get(), bufferSize_);
+            result_ = ExtractMetadataCore(&bufferReader, &cancelled_);
+
+            if (result_.cancelled) {
+                SetError("Operation cancelled");
+            }
+
+        } catch (const std::exception& e) {
+            SetError(std::string("Metadata extraction failed: ") + e.what());
+        }
+    }
+
+    void OnOK() override {
+        Napi::Env env = Env();
+        Napi::Object result = Napi::Object::New(env);
+        result.Set("pageCount", Napi::Number::New(env, result_.pageCount));
+        result.Set("version", Napi::String::New(env, result_.version));
+        SetMetadataField(result, "title", result_.title, env);
+        SetMetadataField(result, "author", result_.author, env);
+        SetMetadataField(result, "subject", result_.subject, env);
+        SetMetadataField(result, "creator", result_.creator, env);
+        SetMetadataField(result, "producer", result_.producer, env);
+        SetMetadataField(result, "creationDate", result_.creationDate, env);
+        SetMetadataField(result, "modificationDate", result_.modificationDate, env);
+        deferred_.Resolve(result);
+    }
+
+    void OnError(const Napi::Error& e) override {
+        deferred_.Reject(e.Value());
+    }
+
+private:
+    std::unique_ptr<uint8_t[]> bufferData_;
+    size_t bufferSize_;
+    std::atomic<bool> cancelled_;
+    MetadataExtractionResult result_;
+    Napi::Promise::Deferred deferred_;
+};
+
+/**
  * Get PDF metadata from buffer
- * Creates buffer stream and delegates to stream-based core function
+ * Returns a promise and stores worker reference for cancellation
  */
 Napi::Value GetMetadataFromBuffer(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
@@ -393,31 +680,78 @@ Napi::Value GetMetadataFromBuffer(const Napi::CallbackInfo& info) {
 
     Napi::Buffer<uint8_t> buffer = info[0].As<Napi::Buffer<uint8_t>>();
 
-    try {
-        // Create a buffer reader for direct stream access
-        BufferByteReader bufferReader(buffer.Data(), buffer.Length());
+    MetadataExtractionFromBufferWorker* worker = new MetadataExtractionFromBufferWorker(
+        env, buffer.Data(), buffer.Length());
 
-        // Delegate to core function
-        MetadataExtractionResult metadata = ExtractMetadataCore(&bufferReader);
+    Napi::Promise promise = worker->GetPromise();
+    Napi::Object promiseObj = promise.As<Napi::Object>();
+    promiseObj.Set("_worker", Napi::External<MetadataExtractionFromBufferWorker>::New(env, worker));
 
-        // Build result object
-        Napi::Object result = Napi::Object::New(env);
-        result.Set("pageCount", Napi::Number::New(env, metadata.pageCount));
-        result.Set("version", Napi::String::New(env, metadata.version));
-        SetMetadataField(result, "title", metadata.title, env);
-        SetMetadataField(result, "author", metadata.author, env);
-        SetMetadataField(result, "subject", metadata.subject, env);
-        SetMetadataField(result, "creator", metadata.creator, env);
-        SetMetadataField(result, "producer", metadata.producer, env);
-        SetMetadataField(result, "creationDate", metadata.creationDate, env);
-        SetMetadataField(result, "modificationDate", metadata.modificationDate, env);
+    worker->Queue();
 
-        return result;
+    return promise;
+}
 
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, std::string("Metadata extraction failed: ") + e.what()).ThrowAsJavaScriptException();
-        return env.Null();
+/**
+ * Cancel a running operation
+ * Takes a worker reference and calls Cancel() on it
+ */
+Napi::Value CancelOperation(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1) {
+        Napi::TypeError::New(env, "Expected worker reference").ThrowAsJavaScriptException();
+        return env.Undefined();
     }
+
+    // Try each worker type - only one will match
+    if (info[0].IsExternal()) {
+        Napi::External<void> ext = info[0].As<Napi::External<void>>();
+        void* data = ext.Data();
+
+        // We don't know the exact type, but Cancel() is a public method on all workers
+        // This is a bit of a hack, but it works because all worker classes have the same layout
+        // for the Cancel() method. A better approach would be to use a base class.
+        // For now, we'll try casting to each type
+
+        // Try TextExtractionWorker
+        try {
+            TextExtractionWorker* worker = static_cast<TextExtractionWorker*>(data);
+            if (worker) {
+                worker->Cancel();
+                return env.Undefined();
+            }
+        } catch(...) {}
+
+        // Try TextExtractionFromBufferWorker
+        try {
+            TextExtractionFromBufferWorker* worker = static_cast<TextExtractionFromBufferWorker*>(data);
+            if (worker) {
+                worker->Cancel();
+                return env.Undefined();
+            }
+        } catch(...) {}
+
+        // Try MetadataExtractionWorker
+        try {
+            MetadataExtractionWorker* worker = static_cast<MetadataExtractionWorker*>(data);
+            if (worker) {
+                worker->Cancel();
+                return env.Undefined();
+            }
+        } catch(...) {}
+
+        // Try MetadataExtractionFromBufferWorker
+        try {
+            MetadataExtractionFromBufferWorker* worker = static_cast<MetadataExtractionFromBufferWorker*>(data);
+            if (worker) {
+                worker->Cancel();
+                return env.Undefined();
+            }
+        } catch(...) {}
+    }
+
+    return env.Undefined();
 }
 
 /**
@@ -428,6 +762,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("extractTextFromBuffer", Napi::Function::New(env, ExtractTextFromBuffer));
     exports.Set("getMetadataFromFile", Napi::Function::New(env, GetMetadataFromFile));
     exports.Set("getMetadataFromBuffer", Napi::Function::New(env, GetMetadataFromBuffer));
+    exports.Set("cancelOperation", Napi::Function::New(env, CancelOperation));
 
     return exports;
 }

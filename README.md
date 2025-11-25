@@ -236,30 +236,46 @@ Token-efficient AI agent using HTTP transport (remote server).
 - ✅ Full K8s observability stack via Helm dependencies
 - ✅ Working log dashboard with table view, search, and analytics
 
-### Phase 7: True Timeout with Async Workers ⏱️
-Proper cancellation and resource cleanup.
+### Phase 7: True Timeout with Async Workers ✅
+**Status**: Complete - PR #11
 
-- N-API async workers for non-blocking extraction
-- Worker threads for PDF processing
-- True timeout cancellation (not just promise rejection)
-- Immediate resource cleanup
-- Thread pool management
+- ✅ N-API async workers for non-blocking extraction
+- ✅ Worker threads for PDF processing
+- ✅ True timeout cancellation (not just promise rejection)
+- ✅ Immediate resource cleanup via atomic cancellation flags
+- ✅ TypeScript interfaces for proper type safety
+- ✅ Comprehensive test suite (40 tests pass, 11 new timeout tests)
+- ✅ Verification scripts for threading and cancellation behavior
+- ✅ Deployed and tested on Kubernetes (both HTTP and stdio transports)
 
-### Phase 8: Password-Protected PDFs 🔐
-Handle encrypted PDF documents.
+### Phase 8: Advanced Observability (Optional) 📊
+**Status**: Deferred - See [Issue #XX]
+
+This phase has been moved to backlog as the current observability stack (Phase 6) provides sufficient operational visibility. Future enhancements could include:
+- Distributed tracing with OpenTelemetry
+- Custom Grafana dashboards for specific use cases
+- Advanced alert configurations
+- Performance profiling tools
+
+### Phase 9: Advanced Bidi Configuration 🔤
+**Status**: Next - In Planning
+
+Configurable text direction handling for better multilingual support.
+
+- Auto-detect text direction from PDF metadata
+- Per-document bidi settings
+- API updates for bidi configuration options
+- Testing with mixed-direction documents
+
+### Future Enhancements
+
+**Password-Protected PDFs 🔐**
+Handle encrypted PDF documents (planned for future).
 
 - Password parameter in extraction APIs
 - Owner and user password support
 - Clear error messages for encrypted files
 - Password validation and security
-
-### Phase 9: Advanced Bidi Configuration 🔤
-Configurable text direction handling.
-
-- Optional RTL direction support
-- Auto-detect text direction
-- Per-document bidi settings
-- API updates for bidi options
 
 ## Development
 
