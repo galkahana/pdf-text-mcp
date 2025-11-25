@@ -2,80 +2,15 @@
 
 TypeScript library for PDF text and metadata extraction with native C++ bindings.
 
-## Installation
+## Quick Start
 
 ```bash
-npm install
-```
-
-## Building
-
-The package includes a native C++ addon that must be compiled.
-
-### Using Just (Recommended)
-
-```bash
-# Install dependencies
-just install
-
-# Full build (native addon + TypeScript)
-just build
-
-# Build only native addon
-just build-native
-
-# Rebuild from scratch
-just rebuild
+# Install and build
+just install && just build
 
 # Run tests
 just test
-
-# Run tests with coverage
-just test-coverage
-
-# Clean build artifacts
-just clean
-
-# Lint check
-just lint
-
-# Auto-fix linting issues
-just lint-fix
-
-# Format code
-just format
-
-# Check formatting without modifying
-just format-check
-
-# Run all checks (lint + format-check + test)
-just check
-
-# Development mode (watch)
-just dev
-
-# See all available commands
-just --list
 ```
-
-### Using npm
-
-```bash
-# Full build (native addon + TypeScript)
-npm run build
-
-# Native addon only
-npm run build:native
-
-# TypeScript only (requires native addon already built)
-npx tsc
-```
-
-**Requirements:**
-- Node.js >= 18.0.0
-- C++17 compiler
-- CMake >= 3.15
-- ICU library (for bidirectional text support)
 
 ## Usage
 
@@ -83,14 +18,13 @@ npx tsc
 import { PdfExtractor } from '@pdf-text-mcp/pdf-parser';
 
 const extractor = new PdfExtractor({
-  maxFileSize: 100 * 1024 * 1024,  // 100MB (default)
-  timeout: 120000,                  // 2 minutes (default)
+  maxFileSize: 100 * 1024 * 1024,  // 100MB default
+  timeout: 30000,                   // 30s default
 });
 
-// Extract text from file
+// Extract text
 const result = await extractor.extractText('/path/to/document.pdf');
-console.log(result.text);
-console.log(`Pages: ${result.pageCount}`);
+console.log(result.text, result.pageCount);
 
 // Extract from buffer
 const buffer = fs.readFileSync('/path/to/document.pdf');
@@ -98,96 +32,52 @@ const bufferResult = await extractor.extractTextFromBuffer(buffer);
 
 // Get metadata
 const metadata = await extractor.getMetadata('/path/to/document.pdf');
-console.log(metadata.title);
-console.log(metadata.author);
+console.log(metadata.title, metadata.author);
 ```
 
 ## API
 
-### `PdfExtractor`
+### Methods
 
-#### Constructor Options
-```typescript
-interface PdfExtractionOptions {
-  maxFileSize?: number;  // Max file size in bytes (default: 100MB)
-  timeout?: number;      // Timeout in milliseconds (default: 120s)
-}
-```
+- `extractText(filePath: string): Promise<PdfExtractionResult>`
+- `extractTextFromBuffer(buffer: Buffer): Promise<PdfExtractionResult>`
+- `getMetadata(filePath: string): Promise<PdfMetadata>`
+- `getMetadataFromBuffer(buffer: Buffer): Promise<PdfMetadata>`
 
-#### Methods
+### Error Codes
 
-**`extractText(filePath: string): Promise<PdfExtractionResult>`**
-Extract text from PDF file.
-
-**`extractTextFromBuffer(buffer: Buffer): Promise<PdfExtractionResult>`**
-Extract text from PDF buffer.
-
-**`getMetadata(filePath: string): Promise<PdfMetadata>`**
-Get PDF metadata from file.
-
-**`getMetadataFromBuffer(buffer: Buffer): Promise<PdfMetadata>`**
-Get PDF metadata from buffer.
-
-#### Result Types
-
-```typescript
-interface PdfExtractionResult {
-  text: string;           // Extracted text content
-  pageCount: number;      // Number of pages
-  processingTime: number; // Processing time in ms
-  fileSize: number;       // File size in bytes
-}
-
-interface PdfMetadata {
-  pageCount: number;
-  version: string;
-  title: string | null;
-  author: string | null;
-  subject: string | null;
-  creator: string | null;
-  producer: string | null;
-  creationDate: string | null;
-  modificationDate: string | null;
-}
-```
-
-## Testing
-
-```bash
-# Run unit tests
-npm test
-
-# Run with coverage
-npm run test:coverage
-
-# Manual integration test
-npm run test:manual
-```
-
-## Features
-
-- ✅ Text extraction from PDF files and buffers
-- ✅ Metadata extraction
-- ✅ Bidirectional text support (Hebrew, Arabic, etc.)
-- ✅ File size limits
-- ✅ Soft timeout protection
-- ✅ TypeScript type definitions
-
-## Error Handling
-
-All methods throw `PdfExtractionError` with error codes:
-- `INVALID_FILE` - File not found or not accessible
-- `FILE_TOO_LARGE` - File exceeds maxFileSize limit
-- `TIMEOUT` - Operation exceeded timeout limit
+- `INVALID_FILE` - File not found or inaccessible
+- `FILE_TOO_LARGE` - Exceeds maxFileSize limit
+- `TIMEOUT` - Operation exceeded timeout
 - `EXTRACTION_FAILED` - PDF parsing failed
 - `NATIVE_ERROR` - Native addon error
 
-```typescript
-try {
-  const result = await extractor.extractText(path);
-} catch (error) {
-  if (error instanceof PdfExtractionError) {
-    console.error(`Error ${error.code}: ${error.message}`);
-  }
-}
+## Build Requirements
+
+- Node.js >= 18.0.0
+- C++17 compiler
+- CMake >= 3.15
+- ICU library (bidirectional text support)
+
+## Commands
+
+```bash
+just install      # Install dependencies
+just build        # Build native addon + TypeScript
+just rebuild      # Clean rebuild
+just test         # Run tests
+just lint         # Lint check
+just format       # Format code
+just check        # Run all checks
+just clean        # Clean build artifacts
 ```
+
+## Implementation Notes
+
+**Async Workers**: All extraction operations run in N-API async workers (separate threads), non-blocking with true timeout cancellation via atomic flags.
+
+**Bidi Support**: Bidirectional text (Hebrew, Arabic) always enabled via ICU library. Hardcoded to LTR direction.
+
+**Stream Architecture**: Core functions work with `IByteReaderWithPosition` interface. File/buffer operations are thin wrappers that create appropriate streams.
+
+**Timeout Behavior**: Promise rejects immediately on timeout (~1-3ms). Worker checks cancellation flag before/after extraction, not during (library limitation).

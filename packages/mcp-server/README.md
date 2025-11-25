@@ -2,96 +2,38 @@
 
 Model Context Protocol server for PDF text extraction.
 
-## Installation
+## Quick Start
 
 ```bash
-npm install
-```
+# Install and build
+just install && just build
 
-## Building and Running
-
-### Using Just (Recommended)
-
-```bash
-# Install dependencies
-just install
-
-# Build TypeScript
-just build
+# Start server (stdio mode)
+just start
 
 # Run tests
 just test
-
-# Lint check
-just lint
-
-# Auto-fix linting
-just lint-fix
-
-# Format code
-just format
-
-# Check formatting
-just format-check
-
-# Run all checks (lint + format + test)
-just check
-
-# Start the server
-just start
-
-# Build and start
-just run
-
-# Development mode (watch)
-just dev
-
-# Clean build artifacts
-just clean
-
-# See all available commands
-just --list
 ```
-
-### Using npm
-
-```bash
-# Build
-npm run build
-
-# Start server (stdio transport)
-npm start
-
-# Or run directly
-node dist/index.js
-```
-
-The server communicates via stdio using the MCP protocol.
 
 ## Configuration
 
 ### Transport Modes
 
-The server supports two transport modes:
-
-1. **stdio** (default) - For local Claude Desktop integration
-2. **http** - For remote deployment with HTTP/SSE transport
+**stdio** (default) - For Claude Desktop and local agents
+**http** - For remote deployment (Docker/Kubernetes)
 
 ### Environment Variables
 
 ```bash
-# Transport Configuration
-TRANSPORT_MODE=stdio        # 'stdio' or 'http' (default: stdio)
-PORT=3000                   # HTTP server port (default: 3000, http mode only)
-HOST=0.0.0.0               # HTTP server host (default: 0.0.0.0, http mode only)
-API_KEY=your-key           # Optional API key for authentication (http mode only)
-
-# Processing Configuration
-MAX_FILE_SIZE=104857600     # 100MB (default)
-TIMEOUT=30000               # 30s (default)
+TRANSPORT_MODE=stdio        # 'stdio' or 'http'
+PORT=3000                   # HTTP port (http mode only)
+HOST=0.0.0.0               # HTTP host (http mode only)
+API_KEY=your-key           # Optional auth (http mode only)
+MAX_FILE_SIZE=104857600    # 100MB default
+TIMEOUT=30000              # 30s default
 ```
 
-### Claude Desktop Setup
+## Claude Desktop Setup
 
 Add to `claude_desktop_config.json`:
 
@@ -103,196 +45,97 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "pdf-text": {
       "command": "node",
-      "args": ["/absolute/path/to/pdf-text-mcp/packages/mcp-server/dist/index.js"]
+      "args": ["/absolute/path/to/mcp-server/dist/index.js"]
     }
   }
 }
 ```
 
-Restart Claude Desktop after making changes.
+Restart Claude Desktop after changes.
 
-## Remote Deployment
-
-The server can be deployed remotely using Docker and Kubernetes.
-
-### Quick Start - Docker
+## Docker Deployment
 
 ```bash
-# Build image
+# Build and run
 just docker-build
-
-# Run container
 just docker-run
 
-# Test endpoints
+# Test
 curl http://localhost:3000/health
-curl http://localhost:3000/ready
-curl http://localhost:3000/metrics
 ```
 
-### Quick Start - Minikube
+## Kubernetes Deployment
 
 ```bash
-# Start minikube, build, and deploy
+# Minikube (development)
 just minikube-all
 
-# Get service URL
-just minikube-url
-
-# Test deployment
-just minikube-test
-```
-
-### Production Deployment
-
-For production Kubernetes deployments:
-
-```bash
-# Using kubectl with manifests
-just k8s-apply
-
-# Using Helm (recommended)
+# Production (Helm)
 helm install pdf-text-mcp ./helm/pdf-text-mcp-server \
   --namespace pdf-text-mcp \
   --create-namespace \
-  --set image.repository=gcr.io/your-project/pdf-text-mcp-server \
-  --set image.tag=v1.0.0 \
   --set apiKey=your-secret-key
-```
-
-See [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md) for comprehensive deployment guide.
-
-### HTTP/SSE Endpoints
-
-When running in HTTP mode:
-
-- **MCP Protocol**: `POST /mcp` - MCP protocol endpoint (SSE streaming)
-- **Health Check**: `GET /health` - Liveness probe
-- **Readiness Check**: `GET /ready` - Readiness probe
-- **Metrics**: `GET /metrics` - Basic metrics (requests, errors, uptime, memory)
-
-### API Authentication
-
-To enable API key authentication:
-
-```bash
-# Docker
-docker run -p 3000:3000 \
-  -e TRANSPORT_MODE=http \
-  -e API_KEY=your-secret-key \
-  pdf-text-mcp-server:latest
-
-# Kubernetes (Helm)
-helm install pdf-text-mcp ./helm/pdf-text-mcp-server \
-  --set apiKey=your-secret-key
-
-# Then include in requests
-curl -X POST http://localhost:3000/mcp \
-  -H "Authorization: Bearer your-secret-key" \
-  -H "Content-Type: application/json" \
-  -d '...'
 ```
 
 ## Tools
 
 ### `extract_text`
 
-Extract text content from PDF file or base64-encoded content.
+Extract text from PDF file or base64 content.
 
 **Parameters:**
-- `filePath` (string, optional) - Path to PDF file (for local/stdio mode)
-- `fileContent` (string, optional) - Base64-encoded PDF content (for remote/http mode)
+- `filePath` (string, optional) - Path to PDF (stdio mode)
+- `fileContent` (string, optional) - Base64 PDF (http mode)
 
-One of `filePath` or `fileContent` must be provided.
-
-**Returns:**
-```json
-{
-  "text": "extracted content...",
-  "pageCount": 5,
-  "processingTime": 245,
-  "fileSize": 102400
-}
-```
+**Returns:** `{text, pageCount, processingTime, fileSize}`
 
 ### `extract_metadata`
 
-Extract metadata from PDF file or base64-encoded content.
+Extract PDF metadata.
 
 **Parameters:**
-- `filePath` (string, optional) - Path to PDF file (for local/stdio mode)
-- `fileContent` (string, optional) - Base64-encoded PDF content (for remote/http mode)
+- `filePath` (string, optional) - Path to PDF (stdio mode)
+- `fileContent` (string, optional) - Base64 PDF (http mode)
 
-One of `filePath` or `fileContent` must be provided.
+**Returns:** `{pageCount, version, title, author, subject, creator, producer, creationDate, modificationDate}`
 
-**Returns:**
-```json
-{
-  "pageCount": 5,
-  "version": "1.7",
-  "title": "Document Title",
-  "author": "Author Name",
-  "creator": "Microsoft Word",
-  "producer": "Adobe PDF",
-  "creationDate": "D:20221030141952+02'00'",
-  "modificationDate": "D:20221030141952+02'00'"
-}
-```
-
-## Testing
+## Commands
 
 ```bash
-# Unit tests
-npm test
-
-# With coverage
-npm run test:coverage
-
-# Manual integration test
-npm run test:manual
-
-# With specific PDF
-npm run test:manual -- /path/to/document.pdf
-
-# All tests
-npm run test:all
+just install      # Install dependencies
+just build        # Build TypeScript
+just start        # Start server
+just run          # Build and start
+just test         # Run tests
+just lint         # Lint check
+just format       # Format code
+just check        # Run all checks
+just clean        # Clean build artifacts
 ```
 
-## Features
+## HTTP Endpoints (http mode only)
 
-- MCP protocol compliant
-- Bidirectional text support (Hebrew, Arabic, etc.)
-- File size limits
-- Configurable timeouts
-- Comprehensive error handling
+- `POST /mcp` - MCP protocol (SSE streaming)
+- `GET /health` - Health check
+- `GET /ready` - Readiness check
+- `GET /metrics` - Prometheus metrics
 
-## Error Codes
+## Implementation Notes
 
-| Code | Description |
-|------|-------------|
-| `INVALID_FILE` | File not found or inaccessible |
-| `FILE_TOO_LARGE` | Exceeds size limit |
-| `TIMEOUT` | Operation timed out |
-| `EXTRACTION_FAILED` | PDF parsing failed |
-| `NATIVE_ERROR` | Native addon error |
+**Dual Transport**: Single codebase supports both stdio (Claude Desktop) and HTTP/SSE (remote) transports via MCP SDK.
+
+**Parameter Differences**: stdio uses `filePath` (local filesystem), HTTP uses `fileContent` (base64) - this separation is intentional for security.
+
+**Observability**: Structured JSON logging (Winston), Prometheus metrics, Loki/Grafana integration via Helm chart dependencies.
+
+**Authentication**: Optional Bearer token auth for HTTP mode. No auth for stdio (parent-child process security model).
 
 ## Troubleshooting
 
-**Server won't start**
-- Build pdf-parser first: `npm run build --workspace=@pdf-text-mcp/pdf-parser`
-- Check Node.js version >= 18.0.0
+**Server won't start**: Build pdf-parser first: `cd ../pdf-parser && just build`
 
-**"File not found" errors**
-- Use absolute paths
-- Check file permissions
+**File not found**: Use absolute paths, check permissions
 
-**Extraction fails**
-- Increase timeout: `export TIMEOUT=180000`
-- Check if PDF is encrypted
-- Verify file size is within limit
+**Extraction fails**: Increase timeout, check if PDF encrypted, verify file size within limit
 
-**Claude Desktop doesn't see server**
-- Check config file path and JSON syntax
-- Use absolute paths in config
-- Restart Claude Desktop
-- Check Claude Desktop logs
+**Claude Desktop doesn't see server**: Check config JSON syntax, use absolute paths, restart Claude Desktop
