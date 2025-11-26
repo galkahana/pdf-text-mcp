@@ -2,33 +2,6 @@
 
 Model Context Protocol server for PDF text extraction using native C++ bindings.
 
-## Architecture
-
-```
-┌─────────────────────────────────────┐
-│    Claude Desktop / AI Client       │
-└──────────────┬──────────────────────┘
-               │ JSON-RPC over stdio
-┌──────────────▼──────────────────────┐
-│         MCP Server                  │
-│   - Protocol handling               │
-│   - extract_text tool               │
-│   - extract_metadata tool           │
-└──────────────┬──────────────────────┘
-               │
-┌──────────────▼──────────────────────┐
-│      @pdf-text-mcp/pdf-parser       │
-│   - TypeScript API                  │
-│   - Native addon loading            │
-└──────────────┬──────────────────────┘
-               │
-┌──────────────▼──────────────────────┐
-│   pdf-text-extraction (C++)         │
-│   - PDF parsing                     │
-│   - Text extraction with ICU bidi   │
-└─────────────────────────────────────┘
-```
-
 ## Project Structure
 
 ```
@@ -140,13 +113,19 @@ Run `just --list` inside any package to see all available commands.
 
 - ✅ PDF text extraction (file and buffer)
 - ✅ Metadata extraction (title, author, dates, etc.)
-- ✅ Bidirectional text support (Hebrew, Arabic) - always enabled
+- ✅ Automatic RTL/LTR text direction detection (Hebrew, Arabic)
 - ✅ MCP protocol integration (stdio + HTTP transports)
 - ✅ Token-efficient HTTP client for remote servers
 - ✅ File size limits and timeout protection
+- ✅ True async cancellation with timeout support
 - ✅ TypeScript + Python type definitions
-- ✅ Comprehensive test suite (85+ tests, 82%+ coverage)
+- ✅ Comprehensive test suite (91 tests)
 - ✅ Example AI agents with PydanticAI
+- ✅ Docker containerization and Kubernetes deployment
+- ✅ Observability (Prometheus, Grafana, Loki)
+
+**Out of Scope:**
+- ❌ Encrypted/password-protected PDFs
 
 ## Packages
 
@@ -196,86 +175,50 @@ Token-efficient AI agent using HTTP transport (remote server).
 - 96% token cost reduction vs naive approaches
 - Best for: Production, remote servers, cost optimization
 
-## Roadmap
+## Architecture
 
-### Phase 5: Server Deployment & Infrastructure ✅
-**Status**: Complete - [PR #6](https://github.com/galkahana/pdf-text-mcp/pull/6)
+The project consists of multiple packages working together:
 
-- ✅ Docker containerization with multi-stage builds (ARM64 support)
-- ✅ Kubernetes deployment manifests with Helm chart
-- ✅ HTTP/SSE transport (MCP SDK StreamableHTTPServerTransport)
-- ✅ Health/readiness/liveness probes
-- ✅ API key authentication (Bearer token)
-- ✅ 4 environment configurations (prod, dev, minikube, default)
+```
+┌─────────────────────────────────────┐
+│    Claude Desktop / AI Client       │
+└──────────────┬──────────────────────┘
+               │ JSON-RPC over stdio/HTTP
+┌──────────────▼──────────────────────┐
+│         MCP Server                  │
+│   - Protocol handling               │
+│   - extract_text tool               │
+│   - extract_metadata tool           │
+└──────────────┬──────────────────────┘
+               │
+┌──────────────▼──────────────────────┐
+│      @pdf-text-mcp/pdf-parser       │
+│   - TypeScript API                  │
+│   - Native addon loading            │
+└──────────────┬──────────────────────┘
+               │
+┌──────────────▼──────────────────────┐
+│   pdf-text-extraction (C++)         │
+│   - PDF parsing                     │
+│   - Text extraction with ICU bidi   │
+└─────────────────────────────────────┘
+```
 
-### Phase 5.5: Python Agent Integration Fix ✅
-**Status**: Complete - [PR #7](https://github.com/galkahana/pdf-text-mcp/pull/7)
+### Design Patterns
 
-- ✅ Fixed Gemini schema validation errors (removed `oneOf` constraints)
-- ✅ Updated test materials to GalKahanaCV2025.pdf
-- ✅ All agent commands working (extract, metadata, summarize)
-- ✅ Both stdio and HTTP/SSE transports functional
+**Stream-Based Core Functions (DRY Principle)**:
+- Core functions work with `IByteReaderWithPosition` streams
+- File/buffer operations are thin wrappers creating appropriate streams
+- Single source of truth for extraction logic
 
-### Phase 5.6: Build Optimization & Cleanup ✅
-**Status**: Complete - [PR #8](https://github.com/galkahana/pdf-text-mcp/pull/8)
-
-- ✅ Updated to pdf-text-extraction v1.1.10 with encoding optimization
-- ✅ Build time: 7 minutes → 2:39 (62% faster)
-- ✅ Cleaned up Dockerfile (13 lines → 3 lines)
-- ✅ Enabled parallel compilation
-- ✅ Docker image: 301MB
-
-### Phase 6: Observability & Operations ✅
-**Status**: Complete - [PR #10](https://github.com/galkahana/pdf-text-mcp/pull/10)
-
-- ✅ Structured JSON logging with correlation IDs (Winston)
-- ✅ Prometheus-compatible metrics (requests, errors, latency, PDF stats)
-- ✅ Log aggregation with Loki + Promtail
-- ✅ Grafana dashboards with searchable logs and metrics visualization
-- ✅ Alert rules configured in Prometheus
-- ✅ Full K8s observability stack via Helm dependencies
-- ✅ Working log dashboard with table view, search, and analytics
-
-### Phase 7: True Timeout with Async Workers ✅
-**Status**: Complete - PR #11
-
-- ✅ N-API async workers for non-blocking extraction
-- ✅ Worker threads for PDF processing
-- ✅ True timeout cancellation (not just promise rejection)
-- ✅ Immediate resource cleanup via atomic cancellation flags
-- ✅ TypeScript interfaces for proper type safety
-- ✅ Comprehensive test suite (40 tests pass, 11 new timeout tests)
-- ✅ Verification scripts for threading and cancellation behavior
-- ✅ Deployed and tested on Kubernetes (both HTTP and stdio transports)
-
-### Phase 8: Advanced Observability (Optional) 📊
-**Status**: Deferred - See [Issue #XX]
-
-This phase has been moved to backlog as the current observability stack (Phase 6) provides sufficient operational visibility. Future enhancements could include:
-- Distributed tracing with OpenTelemetry
-- Custom Grafana dashboards for specific use cases
-- Advanced alert configurations
-- Performance profiling tools
-
-### Phase 9: Advanced Bidi Configuration 🔤
-**Status**: Next - In Planning
-
-Configurable text direction handling for better multilingual support.
-
-- Auto-detect text direction from PDF metadata
-- Per-document bidi settings
-- API updates for bidi configuration options
-- Testing with mixed-direction documents
-
-### Future Enhancements
-
-**Password-Protected PDFs 🔐**
-Handle encrypted PDF documents (planned for future).
-
-- Password parameter in extraction APIs
-- Owner and user password support
-- Clear error messages for encrypted files
-- Password validation and security
+**Worker Architecture**:
+- `ICancellable` interface for type-safe cancellation
+- `CancellableAsyncWorker<T>` template base class
+- Specialized base classes: `TextExtractionBaseWorker`, `MetadataExtractionBaseWorker`
+- Worker implementations in `native/workers/` folder
+- Client bindings (`napi_bindings`, `pdf_extractor_addon`) at root
+- N-API async workers for non-blocking extraction on separate threads
+- Atomic cancellation flags for immediate resource cleanup
 
 ## Development
 

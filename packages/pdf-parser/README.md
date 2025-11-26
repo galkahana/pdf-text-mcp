@@ -76,7 +76,7 @@ just clean        # Clean build artifacts
 
 **Async Workers**: All extraction operations run in N-API async workers (separate threads), non-blocking with true timeout cancellation via atomic flags.
 
-**Bidi Support**: Bidirectional text (Hebrew, Arabic) always enabled via ICU library. Hardcoded to LTR direction.
+**Bidi Support**: Bidirectional text (Hebrew, Arabic) always enabled via ICU library with automatic RTL/LTR detection using multi-signal analysis (alignment variance, content analysis, script detection).
 
 **Stream Architecture**: Core functions work with `IByteReaderWithPosition` interface. File/buffer operations are thin wrappers that create appropriate streams.
 
