@@ -13,11 +13,11 @@ interface NativeAddon {
   extractTextFromFile: (
     filePath: string,
     bidiDirection: number
-  ) => Promise<{ text: string; pageCount: number }>;
+  ) => Promise<{ text: string; pageCount: number; bidiDirection: number }>;
   extractTextFromBuffer: (
     buffer: Buffer,
     bidiDirection: number
-  ) => Promise<{ text: string; pageCount: number }>;
+  ) => Promise<{ text: string; pageCount: number; bidiDirection: number }>;
   getMetadataFromFile: (filePath: string) => Promise<PdfMetadata>;
   getMetadataFromBuffer: (buffer: Buffer) => Promise<PdfMetadata>;
 }
@@ -73,6 +73,7 @@ export class PdfExtractor {
         pageCount: result.pageCount,
         processingTime,
         fileSize,
+        textDirection: result.bidiDirection === 1 ? 'rtl' : 'ltr',
       };
     } catch (error) {
       if (error instanceof PdfExtractionError) {
@@ -114,6 +115,7 @@ export class PdfExtractor {
         pageCount: result.pageCount,
         processingTime,
         fileSize: buffer.length,
+        textDirection: result.bidiDirection === 1 ? 'rtl' : 'ltr',
       };
     } catch (error) {
       if (error instanceof PdfExtractionError) {
@@ -171,24 +173,26 @@ export class PdfExtractor {
   }
 
   // Native binding methods
-  // Note: Bidi direction is always LTR (0). The bidi algorithm is ALWAYS applied
-  // by the native library when ICU is available (required at build time).
+  // Note: Bidi algorithm is ALWAYS applied by the native library when ICU is available.
+  // Direction is auto-detected (-1) to determine whether text is RTL or LTR.
   //
   // These methods now use N-API async workers with true cancellation support.
   // The promise contains a _worker reference that can be used for cancellation.
   private async extractTextNative(filePath: string): Promise<{
     text: string;
     pageCount: number;
+    bidiDirection: number;
   }> {
-    const promise = nativeAddon.extractTextFromFile(filePath, 0 /* LTR */);
+    const promise = nativeAddon.extractTextFromFile(filePath, -1 /* auto-detect */);
     return promise;
   }
 
   private async extractTextFromBufferNative(buffer: Buffer): Promise<{
     text: string;
     pageCount: number;
+    bidiDirection: number;
   }> {
-    const promise = nativeAddon.extractTextFromBuffer(buffer, 0 /* LTR */);
+    const promise = nativeAddon.extractTextFromBuffer(buffer, -1 /* auto-detect */);
     return promise;
   }
 

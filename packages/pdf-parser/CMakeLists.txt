@@ -41,7 +41,7 @@ include_directories(${NODE_ADDON_API_DIR})
 # Add NAPI_VERSION definition
 add_definitions(-DNAPI_VERSION=8)
 
-file(GLOB SOURCE_FILES "native/*.cpp" "native/*.h")
+file(GLOB SOURCE_FILES "native/*.cpp" "native/*.h" "native/workers/*.cpp" "native/workers/*.h")
 
 # Create the Node.js addon
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})

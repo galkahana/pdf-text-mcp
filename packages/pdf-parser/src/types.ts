@@ -18,6 +18,8 @@ export interface PdfExtractionResult {
   processingTime: number;
   /** File size in bytes */
   fileSize: number;
+  /** Detected text direction: 'ltr' (left-to-right) or 'rtl' (right-to-left) */
+  textDirection: 'ltr' | 'rtl';
 }
 
 export interface PdfMetadata {
