@@ -45,8 +45,30 @@ just build-all
 
 # Run tests
 just test-all
+```
 
-# Run a quick demo
+### Running a Demo
+
+After building, you can run example AI agents to see the system in action.
+
+**Option 1: stdio transport (local, simplest)**
+
+```bash
+cd packages/example-agent-stdio
+just demo
+```
+
+**Option 2: HTTP transport (remote server)**
+
+Terminal 1 - Start the MCP server:
+```bash
+cd packages/mcp-server
+just run  # Runs locally on port 3000
+```
+
+Terminal 2 - Run the agent:
+```bash
+cd packages/example-agent-http
 just demo
 ```
 
